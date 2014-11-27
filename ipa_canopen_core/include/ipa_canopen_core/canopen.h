@@ -794,7 +794,7 @@ namespace canopen{
     const uint8_t NMT_RESET_NODE = 0x81;
     const uint8_t NMT_RESET_COMMUNICATION = 0x82;
 
-    extern TPCANMsg NMTmsg;
+    extern CAN_PACKET NMTmsg;
 
     inline void sendNMT(uint8_t CANid, uint8_t command)
     {
@@ -814,7 +814,7 @@ namespace canopen{
     //	define SYNC variables and functions
     /***************************************************************/
 
-    extern TPCANMsg syncMsg;
+    extern CAN_PACKET syncMsg;
 
     inline void sendSync() {
         TPCANMsg syncMsg;

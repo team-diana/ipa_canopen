@@ -497,12 +497,12 @@ void halt(std::string deviceFile, std::string chainName, std::chrono::millisecon
 {
     CanCloseDriver(h);
 
-    NMTmsg.ID = 0;
-    NMTmsg.MSGTYPE = 0x00;
+    NMTmsg.CAN_ID = 0;
+    NMTmsg.rtr = 0x00;
     NMTmsg.LEN = 2;
 
-    syncMsg.ID = 0x80;
-    syncMsg.MSGTYPE = 0x00;
+    syncMsg.CAN_ID = 0x80;
+    syncMsg.rtr = 0x00;
 
     syncMsg.LEN = 0x00;
 
@@ -682,13 +682,13 @@ void setMotorState(uint16_t CANid, std::string targetState)
 //			define NMT variables
 /***************************************************************/
 
-TPCANMsg NMTmsg;
+CAN_PACKET NMTmsg;
 
 /***************************************************************/
 //			define SYNC variables
 /***************************************************************/
 
-TPCANMsg syncMsg;
+CAN_PACKET syncMsg;
 
 /***************************************************************/
 //		define SDO protocol functions

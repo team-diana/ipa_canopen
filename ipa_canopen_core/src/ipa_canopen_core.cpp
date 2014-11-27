@@ -189,7 +189,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
         if(!connection_is_available)
         {
 
-            CAN_Close(canopen::h);
+            CanCloseDriver(canopen::h);
             connection_success = canopen::openConnection(deviceFile, canopen::baudRate);
 
             if (!connection_success)
@@ -696,10 +696,10 @@ TPCANMsg syncMsg;
 
 void requestDataBlock1(uint8_t CANid)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
-    msg.MSGTYPE = 0x00;
+    msg.CAN_ID = CANid + 0x600;
+    msg.rtr = 0x00;
     msg.LEN = 8;
     msg.DATA[0] = 0x60;
     msg.DATA[1] = 0x00;
@@ -709,15 +709,15 @@ void requestDataBlock1(uint8_t CANid)
     msg.DATA[5] = 0x00;
     msg.DATA[6] = 0x00;
     msg.DATA[7] = 0x00;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void requestDataBlock2(uint8_t CANid)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
-    msg.MSGTYPE = 0x00;
+    msg.CAN_ID = CANid + 0x600;
+    msg.rtr = 0x00;
     msg.LEN = 8;
     msg.DATA[0] = 0x70;
     msg.DATA[1] = 0x00;
@@ -727,19 +727,19 @@ void requestDataBlock2(uint8_t CANid)
     msg.DATA[5] = 0x00;
     msg.DATA[6] = 0x00;
     msg.DATA[7] = 0x00;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void controlPDO(uint8_t CANid, u_int16_t control1, u_int16_t control2)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x200;
-    msg.MSGTYPE = 0x00;
+    msg.CAN_ID = CANid + 0x200;
+    msg.rtr = 0x00;
     msg.LEN = 2;
     msg.DATA[0] = control1;
     msg.DATA[1] = control2;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void uploadSDO(uint8_t CANid, SDOkey sdo)

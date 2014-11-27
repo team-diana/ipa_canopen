@@ -495,7 +495,7 @@ bool recover(std::string deviceFile, std::string chainName, std::chrono::millise
 
 void halt(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval)
 {
-    CAN_Close(h);
+    CanCloseDriver(h);
 
     NMTmsg.ID = 0;
     NMTmsg.MSGTYPE = 0x00;

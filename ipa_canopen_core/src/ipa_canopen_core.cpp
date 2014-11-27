@@ -63,6 +63,15 @@
 #include <unordered_map>
 #include<algorithm>
 
+// These values are taken from the Adlink 7841 datasheet
+#define CAN_BAUD_1M 3
+#define CAN_BAUD_500K 2
+#define CAN_BAUD_250K 1
+#define CAN_BAUD_125K 0
+
+// These values are good for our configuration
+#define CAN_CARD_IDX 0
+#define CAN_PORT_IDX 0
 
 namespace canopen
 {
@@ -77,7 +86,7 @@ std::chrono::milliseconds syncInterval;
 std::string baudRate;
 std::map<uint8_t, Device> devices;
 std::map<std::string, DeviceGroup> deviceGroups;
-HANDLE h;
+int h;
 std::vector<std::thread> managerThreads;
 std::vector<std::string> openDeviceFiles;
 bool atFirstInit=true;
@@ -108,11 +117,24 @@ std::chrono::duration<double> elapsed_seconds;
 
 bool openConnection(std::string devName, std::string baudrate)
 {
-    h = LINUX_CAN_Open(devName.c_str(), O_RDWR);
-    if (!h)
-        return false;
+    /*
+     * Adlink driver does not have the 'devName', but the port is addressed
+     * through the card index and the port index.
+     */
 
-    errno = CAN_Init(h, baudrates[baudrate], CAN_INIT_TYPE_ST);
+    if ((h = CanOpenDriver(CAN_CARD_IDX, CAN_PORT_IDX)) == -1) {
+        return false;
+    }
+
+    PORT_STRUCT setPort;
+    setPort.mode = 0; // 0 : 11-bit ;  1 : 29-bit CAN network
+    setPort.accCode = 0; // This configuration of accCode and accMask enables
+    setPort.accMask = 0x7FF; // all MAC_IDs input.
+    setPort.baudrate = baudrates[baudrate];
+
+    if ((CanConfigPort(h, &setPort)) == -1) {
+        return false;
+    }
 
     return true;
 }

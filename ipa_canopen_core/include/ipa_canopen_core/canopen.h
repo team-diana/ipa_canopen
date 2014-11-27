@@ -94,11 +94,6 @@ namespace canopen{
         {"500K" , CAN_BAUD_500K},
         {"250K" , CAN_BAUD_250K},
         {"125K" , CAN_BAUD_125K},
-        {"100K" , CAN_BAUD_100K},
-        {"50K" , CAN_BAUD_50K},
-        {"20K" , CAN_BAUD_20K},
-        {"10K" , CAN_BAUD_10K},
-        {"5K" , CAN_BAUD_5K}
     };
 
     /***************************************************************/

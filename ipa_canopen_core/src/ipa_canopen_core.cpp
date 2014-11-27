@@ -180,6 +180,10 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
 
         bool connection_success;
 
+        /*
+         * This check does not make sense in our case, since we
+         * do not have the deviceFile strings.
+         */
         bool connection_is_available = std::find(canopen::openDeviceFiles.begin(), canopen::openDeviceFiles.end(), deviceFile) != canopen::openDeviceFiles.end();
 
         if(!connection_is_available)
@@ -740,10 +744,10 @@ void controlPDO(uint8_t CANid, u_int16_t control1, u_int16_t control2)
 
 void uploadSDO(uint8_t CANid, SDOkey sdo)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
-    msg.MSGTYPE = 0x00;
+    msg.CAN_ID = CANid + 0x600;
+    msg.rtr = 0x00; // Corresponding to Standard frame
     msg.LEN = 8;
     msg.DATA[0] = 0x40;
     msg.DATA[1] = sdo.index & 0xFF;
@@ -753,14 +757,15 @@ void uploadSDO(uint8_t CANid, SDOkey sdo)
     msg.DATA[5] = 0x00;
     msg.DATA[6] = 0x00;
     msg.DATA[7] = 0x00;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
+    msg.CAN_ID = CANid + 0x600;
+    // msg.rtr already set to zero
     msg.LEN = 8;
     msg.DATA[0] = 0x23;
     msg.DATA[1] = sdo.index & 0xFF;
@@ -770,14 +775,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value)
     msg.DATA[5] = (value >> 8) & 0xFF;
     msg.DATA[6] = (value >> 16) & 0xFF;
     msg.DATA[7] = (value >> 24) & 0xFF;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void sendSDO(uint8_t CANid, SDOkey sdo, int32_t value)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
+    msg.CAN_ID = CANid + 0x600;
+    // msg.rtr already set to zero
     msg.LEN = 8;
     msg.DATA[0] = 0x23;
     msg.DATA[1] = sdo.index & 0xFF;
@@ -787,14 +793,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, int32_t value)
     msg.DATA[5] = (value >> 8) & 0xFF;
     msg.DATA[6] = (value >> 16) & 0xFF;
     msg.DATA[7] = (value >> 24) & 0xFF;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void sendSDO_unknown(uint8_t CANid, SDOkey sdo, int32_t value)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
+    msg.CAN_ID = CANid + 0x600;
+    // msg.rtr already set to zero
     msg.LEN = 8;
     msg.DATA[0] = 0x22;
     msg.DATA[1] = sdo.index & 0xFF;
@@ -804,14 +811,15 @@ void sendSDO_unknown(uint8_t CANid, SDOkey sdo, int32_t value)
     msg.DATA[5] = (value >> 8) & 0xFF;
     msg.DATA[6] = (value >> 16) & 0xFF;
     msg.DATA[7] = (value >> 24) & 0xFF;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void sendSDO(uint8_t CANid, SDOkey sdo, uint8_t value)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
+    msg.CAN_ID = CANid + 0x600;
+    // msg.rtr already set to zero
     msg.LEN = 8;
     msg.DATA[0] = 0x2F;
     msg.DATA[1] = sdo.index & 0xFF;
@@ -821,16 +829,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, uint8_t value)
     msg.DATA[5] = 0x00;
     msg.DATA[6] = 0x00;
     msg.DATA[7] = 0x00;
-    CAN_Write(h, &msg);
-
-
+    CanSendMsg(h, &msg);
 }
 
 void sendSDO(uint8_t CANid, SDOkey sdo, uint16_t value)
 {
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = CANid + 0x600;
+    msg.CAN_ID = CANid + 0x600;
+    // msg.rtr already set to zero
     msg.LEN = 8;
     msg.DATA[0] = 0x2B;
     msg.DATA[1] = sdo.index & 0xFF;
@@ -840,7 +847,7 @@ void sendSDO(uint8_t CANid, SDOkey sdo, uint16_t value)
     msg.DATA[5] = (value >> 8) & 0xFF;
     msg.DATA[6] = 0x00;
     msg.DATA[7] = 0x00;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 /***************************************************************/

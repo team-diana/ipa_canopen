@@ -798,16 +798,16 @@ namespace canopen{
 
     inline void sendNMT(uint8_t CANid, uint8_t command)
     {
-        TPCANMsg NMTmsg;
+        CAN_PACKET NMTmsg;
         std::memset(&NMTmsg, 0, sizeof(NMTmsg));
-        NMTmsg.ID = 0;
-        NMTmsg.MSGTYPE = 0x00;
+        NMTmsg.CAN_ID = 0;
+        NMTmsg.rtr = 0x00;
         NMTmsg.LEN = 2;
 
         //std::cout << "Sending NMT. CANid: " << (uint16_t)CANid << "\tcommand: " << (uint16_t)command << std::endl;
         NMTmsg.DATA[0] = command;
         NMTmsg.DATA[1] = CANid;
-        CAN_Write(h, &NMTmsg);
+        CanSendMsg(h, &NMTmsg);
     }
 
     /***************************************************************/

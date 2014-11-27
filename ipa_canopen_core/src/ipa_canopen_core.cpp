@@ -906,26 +906,26 @@ std::function< void (uint16_t CANid, double positionValue, double velocityValue)
 void defaultPDOOutgoing_interpolated(uint16_t CANid, double positionValue)
 {
     static const uint16_t myControlword = (CONTROLWORD_ENABLE_OPERATION | CONTROLWORD_ENABLE_IP_MODE);
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = 0x300 + CANid;
-    msg.MSGTYPE = 0x00;
+    msg.CAN_ID = 0x300 + CANid;
+    msg.rtr = 0x00;
     msg.LEN = 4;
     int32_t mdegPos = rad2mdeg(positionValue);
     msg.DATA[0] = mdegPos & 0xFF;
     msg.DATA[1] = (mdegPos >> 8) & 0xFF;
     msg.DATA[2] = (mdegPos >> 16) & 0xFF;
     msg.DATA[3] = (mdegPos >> 24) & 0xFF;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 void defaultPDOOutgoing(uint16_t CANid, double positionValue)
 {
     static const uint16_t myControlword = (CONTROLWORD_ENABLE_OPERATION | CONTROLWORD_ENABLE_IP_MODE);
-    TPCANMsg msg;
+    CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
-    msg.ID = 0x200 + CANid;
-    msg.MSGTYPE = 0x00;
+    msg.CAN_ID = 0x200 + CANid;
+    msg.rtr = 0x00;
     msg.LEN = 8;
     msg.DATA[0] = myControlword & 0xFF;
     msg.DATA[1] = (myControlword >> 8) & 0xFF;
@@ -936,7 +936,7 @@ void defaultPDOOutgoing(uint16_t CANid, double positionValue)
     msg.DATA[5] = (mdegPos >> 8) & 0xFF;
     msg.DATA[6] = (mdegPos >> 16) & 0xFF;
     msg.DATA[7] = (mdegPos >> 24) & 0xFF;
-    CAN_Write(h, &msg);
+    CanSendMsg(h, &msg);
 }
 
 

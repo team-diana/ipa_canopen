@@ -62,12 +62,16 @@
 #include <cstring>
 #include <unordered_map>
 #include<algorithm>
+#include <cstring>
+#include <cassert>
 
 // These values are taken from the Adlink 7841 datasheet
-#define CAN_BAUD_1M 3
-#define CAN_BAUD_500K 2
-#define CAN_BAUD_250K 1
-#define CAN_BAUD_125K 0
+enum BAUDRATE {
+CAN_BAUD_1M = 3,
+CAN_BAUD_500K = 2,
+CAN_BAUD_250K = 1,
+CAN_BAUD_125K = 0,
+};
 
 // These values are good for our configuration
 #define CAN_CARD_IDX 0
@@ -94,8 +98,8 @@ int initTrials=0;
 std::map<SDOkey, std::function<void (uint8_t CANid, BYTE data[8])> > incomingDataHandlers { { STATUSWORD, sdo_incoming }, { DRIVERTEMPERATURE, sdo_incoming }, { MODES_OF_OPERATION_DISPLAY, sdo_incoming } };
 std::map<SDOkey, std::function<void (uint8_t CANid, BYTE data[8])> > incomingErrorHandlers { { ERRORWORD, errorword_incoming }, { MANUFACTURER, errorword_incoming } };
 std::map<SDOkey, std::function<void (uint8_t CANid, BYTE data[8])> > incomingManufacturerDetails { {MANUFACTURERHWVERSION, manufacturer_incoming}, {MANUFACTURERDEVICENAME, manufacturer_incoming}, {MANUFACTURERSOFTWAREVERSION, manufacturer_incoming} };
-std::map<uint16_t, std::function<void (const TPCANRdMsg m)> > incomingPDOHandlers;
-std::map<uint16_t, std::function<void (const TPCANRdMsg m)> > incomingEMCYHandlers;
+std::map<uint16_t, std::function<void (const CAN_PACKET m)> > incomingPDOHandlers;
+std::map<uint16_t, std::function<void (const CAN_PACKET m)> > incomingEMCYHandlers;
 bool recover_active;
 bool halt_active;
 
@@ -130,7 +134,20 @@ bool openConnection(std::string devName, std::string baudrate)
     setPort.mode = 0; // 0 : 11-bit ;  1 : 29-bit CAN network
     setPort.accCode = 0; // This configuration of accCode and accMask enables
     setPort.accMask = 0x7FF; // all MAC_IDs input.
-    setPort.baudrate = baudrates[baudrate];
+
+    std::map<std::string, BAUDRATE> myMap = { {"125K", CAN_BAUD_125K},
+                                              {"250K", CAN_BAUD_250K},
+                                              {"500K", CAN_BAUD_500K},
+                                              {"1M", CAN_BAUD_1M} };
+
+    auto it = myMap.find(baudrate);
+    if(it == myMap.end()) {
+      std::cerr << "invalid baud rate: " << baudrate << std::endl;
+      return false;
+    }
+
+
+    setPort.baudrate = it->second;
 
     if ((CanConfigPort(h, &setPort)) == -1) {
         return false;
@@ -213,7 +230,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
         std::chrono::time_point<std::chrono::high_resolution_clock> time_start, time_end;
         time_start = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed_seconds;
-        
+
         canopen::initDeviceManagerThread(chainName,canopen::deviceManager);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -226,7 +243,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
         while(sdo_protect)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            
+
          elapsed_seconds = time_end - time_start;
 
             if(elapsed_seconds.count() > 5.0)
@@ -239,8 +256,8 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
 
         time_start = std::chrono::high_resolution_clock::now();
 
-        
-        
+
+
         for(auto id : canopen::deviceGroups[chainName].getCANids())
         {
 
@@ -499,12 +516,12 @@ void halt(std::string deviceFile, std::string chainName, std::chrono::millisecon
 
     NMTmsg.CAN_ID = 0;
     NMTmsg.rtr = 0x00;
-    NMTmsg.LEN = 2;
+    NMTmsg.len = 2;
 
     syncMsg.CAN_ID = 0x80;
     syncMsg.rtr = 0x00;
 
-    syncMsg.LEN = 0x00;
+    syncMsg.len = 0x00;
 
     if (!canopen::openConnection(deviceFile, canopen::baudRate))
     {
@@ -700,15 +717,15 @@ void requestDataBlock1(uint8_t CANid)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     msg.rtr = 0x00;
-    msg.LEN = 8;
-    msg.DATA[0] = 0x60;
-    msg.DATA[1] = 0x00;
-    msg.DATA[2] = 0x00;
-    msg.DATA[3] = 0x00;
-    msg.DATA[4] = 0x00;
-    msg.DATA[5] = 0x00;
-    msg.DATA[6] = 0x00;
-    msg.DATA[7] = 0x00;
+    msg.len = 8;
+    msg.data[0] = 0x60;
+    msg.data[1] = 0x00;
+    msg.data[2] = 0x00;
+    msg.data[3] = 0x00;
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x00;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
     CanSendMsg(h, &msg);
 }
 
@@ -718,15 +735,15 @@ void requestDataBlock2(uint8_t CANid)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     msg.rtr = 0x00;
-    msg.LEN = 8;
-    msg.DATA[0] = 0x70;
-    msg.DATA[1] = 0x00;
-    msg.DATA[2] = 0x00;
-    msg.DATA[3] = 0x00;
-    msg.DATA[4] = 0x00;
-    msg.DATA[5] = 0x00;
-    msg.DATA[6] = 0x00;
-    msg.DATA[7] = 0x00;
+    msg.len = 8;
+    msg.data[0] = 0x70;
+    msg.data[1] = 0x00;
+    msg.data[2] = 0x00;
+    msg.data[3] = 0x00;
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x00;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
     CanSendMsg(h, &msg);
 }
 
@@ -736,9 +753,9 @@ void controlPDO(uint8_t CANid, u_int16_t control1, u_int16_t control2)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x200;
     msg.rtr = 0x00;
-    msg.LEN = 2;
-    msg.DATA[0] = control1;
-    msg.DATA[1] = control2;
+    msg.len = 2;
+    msg.data[0] = control1;
+    msg.data[1] = control2;
     CanSendMsg(h, &msg);
 }
 
@@ -748,15 +765,15 @@ void uploadSDO(uint8_t CANid, SDOkey sdo)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     msg.rtr = 0x00; // Corresponding to Standard frame
-    msg.LEN = 8;
-    msg.DATA[0] = 0x40;
-    msg.DATA[1] = sdo.index & 0xFF;
-    msg.DATA[2] = (sdo.index >> 8) & 0xFF;
-    msg.DATA[3] = sdo.subindex;
-    msg.DATA[4] = 0x00;
-    msg.DATA[5] = 0x00;
-    msg.DATA[6] = 0x00;
-    msg.DATA[7] = 0x00;
+    msg.len = 8;
+    msg.data[0] = 0x40;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x00;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
     CanSendMsg(h, &msg);
 }
 
@@ -766,15 +783,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     // msg.rtr already set to zero
-    msg.LEN = 8;
-    msg.DATA[0] = 0x23;
-    msg.DATA[1] = sdo.index & 0xFF;
-    msg.DATA[2] = (sdo.index >> 8) & 0xFF;
-    msg.DATA[3] = sdo.subindex;
-    msg.DATA[4] = value & 0xFF;
-    msg.DATA[5] = (value >> 8) & 0xFF;
-    msg.DATA[6] = (value >> 16) & 0xFF;
-    msg.DATA[7] = (value >> 24) & 0xFF;
+    msg.len = 8;
+    msg.data[0] = 0x23;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = value & 0xFF;
+    msg.data[5] = (value >> 8) & 0xFF;
+    msg.data[6] = (value >> 16) & 0xFF;
+    msg.data[7] = (value >> 24) & 0xFF;
     CanSendMsg(h, &msg);
 }
 
@@ -784,15 +801,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, int32_t value)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     // msg.rtr already set to zero
-    msg.LEN = 8;
-    msg.DATA[0] = 0x23;
-    msg.DATA[1] = sdo.index & 0xFF;
-    msg.DATA[2] = (sdo.index >> 8) & 0xFF;
-    msg.DATA[3] = sdo.subindex;
-    msg.DATA[4] = value & 0xFF;
-    msg.DATA[5] = (value >> 8) & 0xFF;
-    msg.DATA[6] = (value >> 16) & 0xFF;
-    msg.DATA[7] = (value >> 24) & 0xFF;
+    msg.len = 8;
+    msg.data[0] = 0x23;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = value & 0xFF;
+    msg.data[5] = (value >> 8) & 0xFF;
+    msg.data[6] = (value >> 16) & 0xFF;
+    msg.data[7] = (value >> 24) & 0xFF;
     CanSendMsg(h, &msg);
 }
 
@@ -802,15 +819,15 @@ void sendSDO_unknown(uint8_t CANid, SDOkey sdo, int32_t value)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     // msg.rtr already set to zero
-    msg.LEN = 8;
-    msg.DATA[0] = 0x22;
-    msg.DATA[1] = sdo.index & 0xFF;
-    msg.DATA[2] = (sdo.index >> 8) & 0xFF;
-    msg.DATA[3] = sdo.subindex;
-    msg.DATA[4] = value & 0xFF;
-    msg.DATA[5] = (value >> 8) & 0xFF;
-    msg.DATA[6] = (value >> 16) & 0xFF;
-    msg.DATA[7] = (value >> 24) & 0xFF;
+    msg.len = 8;
+    msg.data[0] = 0x22;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = value & 0xFF;
+    msg.data[5] = (value >> 8) & 0xFF;
+    msg.data[6] = (value >> 16) & 0xFF;
+    msg.data[7] = (value >> 24) & 0xFF;
     CanSendMsg(h, &msg);
 }
 
@@ -820,15 +837,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, uint8_t value)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     // msg.rtr already set to zero
-    msg.LEN = 8;
-    msg.DATA[0] = 0x2F;
-    msg.DATA[1] = sdo.index & 0xFF;
-    msg.DATA[2] = (sdo.index >> 8) & 0xFF;
-    msg.DATA[3] = sdo.subindex;
-    msg.DATA[4] = value & 0xFF;
-    msg.DATA[5] = 0x00;
-    msg.DATA[6] = 0x00;
-    msg.DATA[7] = 0x00;
+    msg.len = 8;
+    msg.data[0] = 0x2F;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = value & 0xFF;
+    msg.data[5] = 0x00;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
     CanSendMsg(h, &msg);
 }
 
@@ -838,15 +855,15 @@ void sendSDO(uint8_t CANid, SDOkey sdo, uint16_t value)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
     // msg.rtr already set to zero
-    msg.LEN = 8;
-    msg.DATA[0] = 0x2B;
-    msg.DATA[1] = sdo.index & 0xFF;
-    msg.DATA[2] = (sdo.index >> 8) & 0xFF;
-    msg.DATA[3] = sdo.subindex;
-    msg.DATA[4] = value & 0xFF;
-    msg.DATA[5] = (value >> 8) & 0xFF;
-    msg.DATA[6] = 0x00;
-    msg.DATA[7] = 0x00;
+    msg.len = 8;
+    msg.data[0] = 0x2B;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = value & 0xFF;
+    msg.data[5] = (value >> 8) & 0xFF;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
     CanSendMsg(h, &msg);
 }
 
@@ -910,12 +927,12 @@ void defaultPDOOutgoing_interpolated(uint16_t CANid, double positionValue)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = 0x300 + CANid;
     msg.rtr = 0x00;
-    msg.LEN = 4;
+    msg.len = 4;
     int32_t mdegPos = rad2mdeg(positionValue);
-    msg.DATA[0] = mdegPos & 0xFF;
-    msg.DATA[1] = (mdegPos >> 8) & 0xFF;
-    msg.DATA[2] = (mdegPos >> 16) & 0xFF;
-    msg.DATA[3] = (mdegPos >> 24) & 0xFF;
+    msg.data[0] = mdegPos & 0xFF;
+    msg.data[1] = (mdegPos >> 8) & 0xFF;
+    msg.data[2] = (mdegPos >> 16) & 0xFF;
+    msg.data[3] = (mdegPos >> 24) & 0xFF;
     CanSendMsg(h, &msg);
 }
 
@@ -926,47 +943,47 @@ void defaultPDOOutgoing(uint16_t CANid, double positionValue)
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = 0x200 + CANid;
     msg.rtr = 0x00;
-    msg.LEN = 8;
-    msg.DATA[0] = myControlword & 0xFF;
-    msg.DATA[1] = (myControlword >> 8) & 0xFF;
-    msg.DATA[2] = 0x00;
-    msg.DATA[3] = 0x00;
+    msg.len = 8;
+    msg.data[0] = myControlword & 0xFF;
+    msg.data[1] = (myControlword >> 8) & 0xFF;
+    msg.data[2] = 0x00;
+    msg.data[3] = 0x00;
     int32_t mdegPos = rad2mdeg(positionValue);
-    msg.DATA[4] = mdegPos & 0xFF;
-    msg.DATA[5] = (mdegPos >> 8) & 0xFF;
-    msg.DATA[6] = (mdegPos >> 16) & 0xFF;
-    msg.DATA[7] = (mdegPos >> 24) & 0xFF;
+    msg.data[4] = mdegPos & 0xFF;
+    msg.data[5] = (mdegPos >> 8) & 0xFF;
+    msg.data[6] = (mdegPos >> 16) & 0xFF;
+    msg.data[7] = (mdegPos >> 24) & 0xFF;
     CanSendMsg(h, &msg);
 }
 
 
 
 
-void defaultEMCY_incoming(uint16_t CANid, const TPCANRdMsg m)
+void defaultEMCY_incoming(uint16_t CANid, const CAN_PACKET m)
 {
 
 
-    uint16_t mydata_low = m.Msg.DATA[0];
-    uint16_t mydata_high = m.Msg.DATA[1];
+    uint16_t mydata_low = m.data[0];
+    uint16_t mydata_high = m.data[1];
 
     //std::cout << "EMCY" << (uint16_t)CANid << " is: " << (uint16_t)m.Msg.DATA[0] << " "<< (uint16_t)m.Msg.DATA[1]<< " " << (uint16_t)m.Msg.DATA[2]<< " "<< (uint16_t)m.Msg.DATA[3]<< " "<< (uint16_t)m.Msg.DATA[4]<< " "<< (uint16_t)m.Msg.DATA[5]<< " "<< (uint16_t)m.Msg.DATA[6]<< " "<< (uint16_t)m.Msg.DATA[7]<< " "<< (uint16_t)m.Msg.DATA[8]<< std::endl;
 
 
 }
 
-void defaultPDO_incoming_status(uint16_t CANid, const TPCANRdMsg m)
+void defaultPDO_incoming_status(uint16_t CANid, const CAN_PACKET m)
 {
 
-    uint16_t mydata_low = m.Msg.DATA[0];
-    uint16_t mydata_high = m.Msg.DATA[1];
+    uint16_t mydata_low = m.data[0];
+    uint16_t mydata_high = m.data[1];
 
-    int8_t mode_display = m.Msg.DATA[2];
+    int8_t mode_display = m.data[2];
 
     if(canopen::use_limit_switch)
     {
 
 
-        uint16_t limit_switch_ = m.Msg.DATA[2];
+        uint16_t limit_switch_ = m.data[2];
 
         bool hardware_limit_positive = limit_switch_ & 0x02;
         bool hardware_limit_negative = limit_switch_ & 0x01;
@@ -1065,60 +1082,62 @@ void defaultPDO_incoming_status(uint16_t CANid, const TPCANRdMsg m)
     // std::cout << "Motor State of Device with CANid " << (uint16_t)CANid << " is: " << devices[CANid].getMotorState() << std::endl;
 }
 
-void defaultPDO_incoming_pos(uint16_t CANid, const TPCANRdMsg m)
+void defaultPDO_incoming_pos(uint16_t CANid, const CAN_PACKET m)
 {
-    double newPos = mdeg2rad(m.Msg.DATA[0] + (m.Msg.DATA[1] << 8) + (m.Msg.DATA[2] << 16) + (m.Msg.DATA[3] << 24));
-    double newVel = mdeg2rad(m.Msg.DATA[4] + (m.Msg.DATA[5] << 8) + (m.Msg.DATA[6] << 16) + (m.Msg.DATA[7] << 24));
+    double newPos = mdeg2rad(m.data[0] + (m.data[1] << 8) + (m.data[2] << 16) + (m.data[3] << 24));
+    double newVel = mdeg2rad(m.data[4] + (m.data[5] << 8) + (m.data[6] << 16) + (m.data[7] << 24));
 
     //newPos = devices[CANid].getConversionFactor()*newPos; //TODO: conversion from yaml file
     //newVel = devices[CANid].getConversionFactor()*newVel;
 
-    if (devices[CANid].getTimeStamp_msec() != std::chrono::milliseconds(0) || devices[CANid].getTimeStamp_usec() != std::chrono::microseconds(0))
-    {
-        auto deltaTime_msec = std::chrono::milliseconds(m.dwTime) - devices[CANid].getTimeStamp_msec();
-        auto deltaTime_usec = std::chrono::microseconds(m.wUsec) - devices[CANid].getTimeStamp_usec();
-        double deltaTime_double = static_cast<double>(deltaTime_msec.count()*1000 + deltaTime_usec.count()) * 0.000001;
-        double result = (newPos - devices[CANid].getActualPos()) / deltaTime_double;
-        devices[CANid].setActualVel(result);
+    // TODO: No msg time, velocity cannot be extrapolated.
+//     if (devices[CANid].getTimeStamp_msec() != std::chrono::milliseconds(0) || devices[CANid].getTimeStamp_usec() != std::chrono::microseconds(0))
+//     {
+//         auto deltaTime_msec = std::chrono::milliseconds(m.dwTime) - devices[CANid].getTimeStamp_msec();
+//         auto deltaTime_usec = std::chrono::microseconds(m.wUsec) - devices[CANid].getTimeStamp_usec();
+//         double deltaTime_double = static_cast<double>(deltaTime_msec.count()*1000 + deltaTime_usec.count()) * 0.000001;
+//         double result = (newPos - devices[CANid].getActualPos()) / deltaTime_double;
+//         devices[CANid].setActualVel(result);
         if (! devices[CANid].getInitialized())
         {
             devices[CANid].setDesiredPos(newPos);
         }
-        //std::cout << "actualPos: " << devices[CANid].getActualPos() << "  desiredPos: " << devices[CANid].getDesiredPos() << std::endl;
-    }
+//         //std::cout << "actualPos: " << devices[CANid].getActualPos() << "  desiredPos: " << devices[CANid].getDesiredPos() << std::endl;
+//     }
 
     devices[CANid].setActualPos(newPos);
     //devices[CANid].setActualVel(newVel);
 
-    devices[CANid].setTimeStamp_msec(std::chrono::milliseconds(m.dwTime));
-    devices[CANid].setTimeStamp_usec(std::chrono::microseconds(m.wUsec));
+//     devices[CANid].setTimeStamp_msec(std::chrono::milliseconds(m.dwTime));
+//     devices[CANid].setTimeStamp_usec(std::chrono::microseconds(m.wUsec));
 
 }
-void defaultPDO_incoming(uint16_t CANid, const TPCANRdMsg m)
+void defaultPDO_incoming(uint16_t CANid, const CAN_PACKET m)
 {
-    double newPos = mdeg2rad(m.Msg.DATA[4] + (m.Msg.DATA[5] << 8) + (m.Msg.DATA[6] << 16) + (m.Msg.DATA[7] << 24) );
+    double newPos = mdeg2rad(m.data[4] + (m.data[5] << 8) + (m.data[6] << 16) + (m.data[7] << 24) );
 
-    if (devices[CANid].getTimeStamp_msec() != std::chrono::milliseconds(0) || devices[CANid].getTimeStamp_usec() != std::chrono::microseconds(0))
-    {
-        auto deltaTime_msec = std::chrono::milliseconds(m.dwTime) - devices[CANid].getTimeStamp_msec();
-        auto deltaTime_usec = std::chrono::microseconds(m.wUsec) - devices[CANid].getTimeStamp_usec();
-        double deltaTime_double = static_cast<double>(deltaTime_msec.count()*1000 + deltaTime_usec.count()) * 0.000001;
-        double result = (newPos - devices[CANid].getActualPos()) / deltaTime_double;
-        devices[CANid].setActualVel(result);
+    // TODO: No msg time, velocity cannot be extrapolated.
+//     if (devices[CANid].getTimeStamp_msec() != std::chrono::milliseconds(0) || devices[CANid].getTimeStamp_usec() != std::chrono::microseconds(0))
+//     {
+//         auto deltaTime_msec = std::chrono::milliseconds(m.dwTime) - devices[CANid].getTimeStamp_msec();
+//         auto deltaTime_usec = std::chrono::microseconds(m.wUsec) - devices[CANid].getTimeStamp_usec();
+//         double deltaTime_double = static_cast<double>(deltaTime_msec.count()*1000 + deltaTime_usec.count()) * 0.000001;
+//         double result = (newPos - devices[CANid].getActualPos()) / deltaTime_double;
+//         devices[CANid].setActualVel(result);
         if (! devices[CANid].getInitialized())
         {
             devices[CANid].setDesiredPos(newPos);
         }
-        //std::cout << "actualPos: " << devices[CANid].getActualPos() << "  desiredPos: " << devices[CANid].getDesiredPos() << std::endl;
-    }
+//         //std::cout << "actualPos: " << devices[CANid].getActualPos() << "  desiredPos: " << devices[CANid].getDesiredPos() << std::endl;
+//     }
 
 
     devices[CANid].setActualPos(newPos);
-    devices[CANid].setTimeStamp_msec(std::chrono::milliseconds(m.dwTime));
-    devices[CANid].setTimeStamp_usec(std::chrono::microseconds(m.wUsec));
+//     devices[CANid].setTimeStamp_msec(std::chrono::milliseconds(m.dwTime));
+//     devices[CANid].setTimeStamp_usec(std::chrono::microseconds(m.wUsec));
 
-    uint16_t mydata_low = m.Msg.DATA[0];
-    uint16_t mydata_high = m.Msg.DATA[1];
+    uint16_t mydata_low = m.data[0];
+    uint16_t mydata_high = m.data[1];
 
     bool ready_switch_on = mydata_low & 0x01;
     bool switched_on = mydata_low & 0x02;
@@ -1225,67 +1244,67 @@ void defaultListener()
     while(true)
     {
         //std::cout << "Reading incoming data" << std::endl;
-        TPCANRdMsg m;
-        errno = LINUX_CAN_Read(h, &m);
+        CAN_PACKET m;
+        errno = CanRcvMsg(h, &m);
         if (errno)
-            perror("LINUX_CAN_Read() error");
+            std::cerr << "LINUX_CAN_Read() error" << std::endl;
 
         // incoming SYNC
-        else if (m.Msg.ID == 0x080)
+        else if (m.CAN_ID == 0x080)
         {
-            // std::cout << std::hex << "SYNC received:  " << (uint16_t)m.Msg.ID << "  " << (uint16_t)m.Msg.DATA[0] << " " << (uint16_t)m.Msg.DATA[1] << " " << (uint16_t)m.Msg.DATA[2] << " " << (uint16_t)m.Msg.DATA[3] << " " << (uint16_t)m.Msg.DATA[4] << " " << (uint16_t)m.Msg.DATA[5] << " " << (uint16_t)m.Msg.DATA[6] << " " << (uint16_t)m.Msg.DATA[7] << std::endl;
+            std::cout << std::hex << "SYNC received:  " << (uint16_t)m.CAN_ID << "  " << (uint16_t)m.data[0] << " " << (uint16_t)m.data[1] << " " << (uint16_t)m.data[2] << " " << (uint16_t)m.data[3] << " " << (uint16_t)m.data[4] << " " << (uint16_t)m.data[5] << " " << (uint16_t)m.data[6] << " " << (uint16_t)m.data[7] << std::endl;
         }
 
         // incoming EMCY
-        else if (m.Msg.ID >= 0x081 && m.Msg.ID <= 0x0FF)
+        else if (m.CAN_ID >= 0x081 && m.CAN_ID <= 0x0FF)
         {
-        //   std::cout << std::hex << "EMCY received:  " << (uint16_t)m.Msg.ID << "  " << (uint16_t)m.Msg.DATA[0] << " " << (uint16_t)m.Msg.DATA[1] << " " << (uint16_t)m.Msg.DATA[2] << " " << (uint16_t)m.Msg.DATA[3] << " " << (uint16_t)m.Msg.DATA[4] << " " << (uint16_t)m.Msg.DATA[5] << " " << (uint16_t)m.Msg.DATA[6] << " " << (uint16_t)m.Msg.DATA[7] << std::endl;
-          if (incomingEMCYHandlers.find(m.Msg.ID) != incomingEMCYHandlers.end())
-             incomingEMCYHandlers[m.Msg.ID](m);
+          std::cout << std::hex << "EMCY received:  " << (uint16_t)m.CAN_ID << "  " << (uint16_t)m.data[0] << " " << (uint16_t)m.data[1] << " " << (uint16_t)m.data[2] << " " << (uint16_t)m.data[3] << " " << (uint16_t)m.data[4] << " " << (uint16_t)m.data[5] << " " << (uint16_t)m.data[6] << " " << (uint16_t)m.data[7] << std::endl;
+          if (incomingEMCYHandlers.find(m.CAN_ID) != incomingEMCYHandlers.end())
+             incomingEMCYHandlers[m.CAN_ID](m);
         }
 
         // incoming TIME
-        else if (m.Msg.ID == 0x100)
+        else if (m.CAN_ID == 0x100)
         {
-            // std::cout << std::hex << "TIME received:  " << (uint16_t)m.Msg.ID << "  " << (uint16_t)m.Msg.DATA[0] << " " << (uint16_t)m.Msg.DATA[1] << " " << (uint16_t)m.Msg.DATA[2] << " " << (uint16_t)m.Msg.DATA[3] << " " << (uint16_t)m.Msg.DATA[4] << " " << (uint16_t)m.Msg.DATA[5] << " " << (uint16_t)m.Msg.DATA[6] << " " << (uint16_t)m.Msg.DATA[7] << std::endl;
+          std::cout << std::hex << "TIME received:  " << (uint16_t)m.CAN_ID << "  " << (uint16_t)m.data[0] << " " << (uint16_t)m.data[1] << " " << (uint16_t)m.data[2] << " " << (uint16_t)m.data[3] << " " << (uint16_t)m.data[4] << " " << (uint16_t)m.data[5] << " " << (uint16_t)m.data[6] << " " << (uint16_t)m.data[7] << std::endl;
         }
 
         // incoming PD0
-        else if (m.Msg.ID >= 0x180 && m.Msg.ID <= 0x4FF)
+        else if (m.CAN_ID >= 0x180 && m.CAN_ID <= 0x4FF)
         {
-            //std::cout << std::hex << "PDO received:  " << (m.Msg.ID - 0x180) << "  " << m.Msg.DATA[0] << " " << m.Msg.DATA[1] << " " << m.Msg.DATA[2] << " " << m.Msg.DATA[3] << " " << m.Msg.DATA[4] << " " << m.Msg.DATA[5] << " " << m.Msg.DATA[6] << " " <<  m.Msg.DATA[7] << " " << std::endl;
-            //std::cout << std::hex << "PDO received:  " << (uint16_t)(m.Msg.ID - 0x180) << "  " << (uint16_t)m.Msg.DATA[0] << " " << (uint16_t)m.Msg.DATA[1] << " " << (uint16_t)m.Msg.DATA[2] << " " << (uint16_t)m.Msg.DATA[3] << " " << (uint16_t)m.Msg.DATA[4] << " " << (uint16_t)m.Msg.DATA[5] << " " << (uint16_t)m.Msg.DATA[6] << " " <<  (uint16_t)m.Msg.DATA[7] << " " << std::endl;
-            if (incomingPDOHandlers.find(m.Msg.ID) != incomingPDOHandlers.end())
-                incomingPDOHandlers[m.Msg.ID](m);
+            std::cout << std::hex << "PDO received:  " << (m.CAN_ID - 0x180) << "  " << m.data[0] << " " << m.data[1] << " " << m.data[2] << " " << m.data[3] << " " << m.data[4] << " " << m.data[5] << " " << m.data[6] << " " <<  m.data[7] << " " << std::endl;
+            std::cout << std::hex << "PDO received:  " << (uint16_t)(m.CAN_ID - 0x180) << "  " << (uint16_t)m.data[0] << " " << (uint16_t)m.data[1] << " " << (uint16_t)m.data[2] << " " << (uint16_t)m.data[3] << " " << (uint16_t)m.data[4] << " " << (uint16_t)m.data[5] << " " << (uint16_t)m.data[6] << " " <<  (uint16_t)m.data[7] << " " << std::endl;
+            if (incomingPDOHandlers.find(m.CAN_ID) != incomingPDOHandlers.end())
+                incomingPDOHandlers[m.CAN_ID](m);
         }
 
         // incoming SD0
-        else if (m.Msg.ID >= 0x580 && m.Msg.ID <= 0x5FF)
+        else if (m.CAN_ID >= 0x580 && m.CAN_ID <= 0x5FF)
         {
-            //std::cout << std::hex << "SDO received:  " << (uint16_t)m.Msg.ID << "  " << (uint16_t)m.Msg.DATA[0] << " " << (uint16_t)m.Msg.DATA[1] << " " << (uint16_t)m.Msg.DATA[2] << " " << (uint16_t)m.Msg.DATA[3] << " " << (uint16_t)m.Msg.DATA[4] << " " << (uint16_t)m.Msg.DATA[5] << " " << (uint16_t)m.Msg.DATA[6] << " " << (uint16_t)m.Msg.DATA[7] << std::endl;
+            std::cout << std::hex << "SDO received:  " << (uint16_t)m.CAN_ID << "  " << (uint16_t)m.data[0] << " " << (uint16_t)m.data[1] << " " << (uint16_t)m.data[2] << " " << (uint16_t)m.data[3] << " " << (uint16_t)m.data[4] << " " << (uint16_t)m.data[5] << " " << (uint16_t)m.data[6] << " " << (uint16_t)m.data[7] << std::endl;
             SDOkey sdoKey(m);
             if(sdo_protect)
             {
-                std::copy(std::begin(m.Msg.DATA), std::end(m.Msg.DATA), std::begin(protect_msg));
+                std::copy(std::begin(m.data), std::end(m.data), std::begin(protect_msg));
                 sdo_protect = false;
             }
             else
             {
                 if (incomingErrorHandlers.find(sdoKey) != incomingErrorHandlers.end())
-                    incomingErrorHandlers[sdoKey](m.Msg.ID - 0x580, m.Msg.DATA);
+                    incomingErrorHandlers[sdoKey](m.CAN_ID - 0x580, m.data);
                 else if (incomingDataHandlers.find(sdoKey) != incomingDataHandlers.end())
-                    incomingDataHandlers[sdoKey](m.Msg.ID - 0x580, m.Msg.DATA);
+                    incomingDataHandlers[sdoKey](m.CAN_ID - 0x580, m.data);
                 else if (incomingManufacturerDetails.find(sdoKey) != incomingManufacturerDetails.end())
-                    incomingManufacturerDetails[sdoKey](m.Msg.ID - 0x580, m.Msg.DATA);
+                    incomingManufacturerDetails[sdoKey](m.CAN_ID - 0x580, m.data);
             }
         }
 
         // incoming NMT error control
-        else if (m.Msg.ID >= 0x700 && m.Msg.ID <= 0x7FF)
+        else if (m.CAN_ID >= 0x700 && m.CAN_ID <= 0x7FF)
         {
-            //std::cout << std::hex << "NMT received:  " << (uint16_t)m.Msg.ID << "  " << (uint16_t)m.Msg.DATA[0] << " " << (uint16_t)m.Msg.DATA[1] << std::endl;
-            uint16_t CANid = (uint16_t)(m.Msg.ID - 0x700);
-            
+            std::cout << std::hex << "NMT received:  " << (uint16_t)m.CAN_ID << "  " << (uint16_t)m.data[0] << " " << (uint16_t)m.data[1] << std::endl;
+            uint16_t CANid = (uint16_t)(m.CAN_ID - 0x700);
+
             std::cout << "Bootup received. Node-ID =  " << CANid << std::endl;
             std::map<uint8_t,Device>::const_iterator search = devices.find(CANid);
             if(search != devices.end())
@@ -1389,7 +1408,7 @@ void readManErrReg(uint16_t CANid)
     canopen::uploadSDO(CANid, canopen::MANUFACTURER);
 }
 
-void readErrorsRegister(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
+void readErrorsRegister(uint16_t CANid, std::shared_ptr<CAN_PACKET> m)
 {
     canopen::uploadSDO(CANid, canopen::STATUSWORD);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1400,7 +1419,7 @@ void readErrorsRegister(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
     canopen::processSingleSDO(CANid, m);
 
     uint16_t error_register;
-    error_register = m->Msg.DATA[4];
+    error_register = m->data[4];
 
     std::cout << "error_register=0x" << std::hex << (int)error_register << ", categories:";
 
@@ -1429,7 +1448,7 @@ std::vector<uint16_t> obtainVendorID(uint16_t CANid)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
-std::vector<uint16_t> obtainProdCode(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
+std::vector<uint16_t> obtainProdCode(uint16_t CANid, std::shared_ptr<CAN_PACKET> m)
 {
     canopen::uploadSDO(CANid, canopen::IDENTITYPRODUCTCODE);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1438,10 +1457,10 @@ std::vector<uint16_t> obtainProdCode(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
 
     canopen::processSingleSDO(CANid, m);
 
-    uint16_t id4 = m->Msg.DATA[4];
-    uint16_t id3 = m->Msg.DATA[5];
-    uint16_t id2 = m->Msg.DATA[6];
-    uint16_t id1 = m->Msg.DATA[7];
+    uint16_t id4 = m->data[4];
+    uint16_t id3 = m->data[5];
+    uint16_t id2 = m->data[6];
+    uint16_t id1 = m->data[7];
 
     product_code.push_back(id1);
     product_code.push_back(id2);
@@ -1452,7 +1471,7 @@ std::vector<uint16_t> obtainProdCode(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
 
 }
 
-uint16_t obtainRevNr(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
+uint16_t obtainRevNr(uint16_t CANid, std::shared_ptr<CAN_PACKET> m)
 {
     canopen::uploadSDO(CANid, canopen::IDENTITYREVNUMBER);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1460,7 +1479,7 @@ uint16_t obtainRevNr(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
 
     canopen::processSingleSDO(CANid, m);
 
-    uint16_t rev_number = m->Msg.DATA[4];
+    uint16_t rev_number = m->data[4];
 
     return rev_number;
 
@@ -1486,7 +1505,7 @@ std::vector<char> obtainManDevName(uint16_t CANid, int size_name)
 
 
 
-std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
+std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<CAN_PACKET> m)
 {
     canopen::uploadSDO(CANid, canopen::MANUFACTURERHWVERSION);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1495,7 +1514,7 @@ std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
 
     canopen::processSingleSDO(CANid, m);
 
-    int size = m->Msg.DATA[4];
+    int size = m->data[4];
 
     canopen::requestDataBlock1(CANid);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1503,7 +1522,7 @@ std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     canopen::processSingleSDO(CANid, m);
 
 
-    for (auto it : m->Msg.DATA)
+    for (auto it : m->data)
     {
         if(manufacturer_hw_version.size() <= size)
             manufacturer_hw_version.push_back(it);
@@ -1516,7 +1535,7 @@ std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     canopen::processSingleSDO(CANid, m);
 
 
-    for (auto it : m->Msg.DATA)
+    for (auto it : m->data)
     {
         if(manufacturer_hw_version.size() <= size)
             manufacturer_hw_version.push_back(it);
@@ -1525,7 +1544,7 @@ std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     return manufacturer_hw_version;
 }
 
-std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m)
+std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<CAN_PACKET> m)
 {
     std::vector<char> manufacturer_sw_version;
 
@@ -1534,7 +1553,7 @@ std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
 
     canopen::processSingleSDO(CANid, m);
 
-    int size = (uint8_t)m->Msg.DATA[4];
+    int size = (uint8_t)m->data[4];
 
     canopen::requestDataBlock1(CANid);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1542,7 +1561,7 @@ std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     canopen::processSingleSDO(CANid, m);
 
 
-    for (auto it : m->Msg.DATA)
+    for (auto it : m->data)
     {
         if(manufacturer_sw_version.size() <= size)
             manufacturer_sw_version.push_back(it);
@@ -1555,7 +1574,7 @@ std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     canopen::processSingleSDO(CANid, m);
 
 
-    for (auto it : m->Msg.DATA)
+    for (auto it : m->data)
     {
         if(manufacturer_sw_version.size() <= size)
             manufacturer_sw_version.push_back(it);
@@ -1567,7 +1586,7 @@ std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     canopen::processSingleSDO(CANid, m);
 
 
-    for (auto it : m->Msg.DATA)
+    for (auto it : m->data)
     {
         if(manufacturer_sw_version.size() <= size)
             manufacturer_sw_version.push_back(it);
@@ -1579,7 +1598,7 @@ std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg>
     canopen::processSingleSDO(CANid, m);
 
 
-    for (auto it : m->Msg.DATA)
+    for (auto it : m->data)
     {
         if(manufacturer_sw_version.size() <= size)
             manufacturer_sw_version.push_back(it);
@@ -1691,13 +1710,13 @@ void sdo_incoming(uint8_t CANid, BYTE data[8])
     }
 }
 
-void processSingleSDO(uint8_t CANid, std::shared_ptr<TPCANRdMsg> message)
+void processSingleSDO(uint8_t CANid, std::shared_ptr<CAN_PACKET> message)
 {
-    message->Msg.ID = 0x00;
+    message->CAN_ID = 0x00;
 
-    while (message->Msg.ID != (0x580+CANid))
+    while (message->CAN_ID!= (0x580+CANid))
     {
-        LINUX_CAN_Read(canopen::h, message.get());
+        CanRcvMsg(h, message.get());
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
@@ -1706,20 +1725,21 @@ void pdoChanged(std::string chainName)
 {
     for (auto id : canopen::deviceGroups[chainName].getCANids())
     {
-        TPCANMsg* mes;
+        CAN_PACKET mes;
+        std::memset(&mes, 0, sizeof(mes));
         //////////////////// Enable tpdo4
-        mes->ID =id + 0x600;
-        mes->MSGTYPE = 0x00;
-        mes->LEN = 8;
-        mes->DATA[0] = 0x2F;
-        mes->DATA[1] = 0x20;
-        mes->DATA[2] = 0x2F;
-        mes->DATA[3] = 0x04;
-        mes->DATA[4] = 0x00;
-        mes->DATA[5] = 0x00;
-        mes->DATA[6] = 0x00;
-        mes->DATA[7] = 0x01;
-        CAN_Write(canopen::h, mes);
+        mes.CAN_ID = id + 0x600;
+        mes.rtr = 0x00;
+        mes.len = 8;
+        mes.data[0] = 0x2F;
+        mes.data[1] = 0x20;
+        mes.data[2] = 0x2F;
+        mes.data[3] = 0x04;
+        mes.data[4] = 0x00;
+        mes.data[5] = 0x00;
+        mes.data[6] = 0x00;
+        mes.data[7] = 0x01;
+        CanSendMsg(h, &mes);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }

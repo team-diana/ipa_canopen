@@ -85,8 +85,8 @@ int main(int argc, char *argv[]) {
     canopen::devices[ CANid ] = canopen::Device(CANid);
     canopen::syncInterval = std::chrono::milliseconds(static_cast<int>(10.0));
 
-    canopen::incomingPDOHandlers[ 0x180 + CANid ] = [CANid](const TPCANRdMsg m) { canopen::defaultPDO_incoming_status( CANid, m ); };
-    canopen::incomingPDOHandlers[ 0x480 + CANid ] = [CANid](const TPCANRdMsg m) { canopen::defaultPDO_incoming_pos( CANid, m ); };
+    canopen::incomingPDOHandlers[ 0x180 + CANid ] = [CANid](const CAN_PACKET m) { canopen::defaultPDO_incoming_status( CANid, m ); };
+    canopen::incomingPDOHandlers[ 0x480 + CANid ] = [CANid](const CAN_PACKET m) { canopen::defaultPDO_incoming_pos( CANid, m ); };
     canopen::sendPos = canopen::defaultPDOOutgoing_interpolated;
 
     std::string chainName = "test_chain";

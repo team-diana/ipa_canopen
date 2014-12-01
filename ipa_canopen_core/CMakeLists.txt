@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(ipa_canopen_core)
 
-find_package(catkin REQUIRED COMPONENTS roscpp libpcan)
+find_package(catkin REQUIRED COMPONENTS roscpp)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
@@ -20,7 +20,7 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 
 catkin_package(
     DEPENDS #
-    CATKIN_DEPENDS roscpp libpcan
+    CATKIN_DEPENDS roscpp
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}
 )
@@ -35,7 +35,7 @@ include_directories (include ${catkin_INCLUDE_DIRS})
 #set the default path for built libraries to the "lib" directory
 #set(LIBRARY_OUTPUT_PATH ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/)
 #set(INCLUDE_OUTPUT_PATH ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_INCLUDE_DESTINATION}/)
-  
+
 
 
 ###########
@@ -45,16 +45,16 @@ add_library(${PROJECT_NAME}
     src/ipa_canopen_core.cpp
   )
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-  
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pci_7841)
+
 add_executable(${PROJECT_NAME}_homing tools/homing.cpp)
-target_link_libraries(${PROJECT_NAME}_homing pthread ipa_canopen_core ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_homing pthread ipa_canopen_core  pci_7841 ${catkin_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_move_device tools/move_device.cpp)
-target_link_libraries(${PROJECT_NAME}_move_device pthread ipa_canopen_core ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_move_device pthread ipa_canopen_core pci_7841 ${catkin_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_get_error tools/get_error.cpp)
-target_link_libraries(${PROJECT_NAME}_get_error pthread ipa_canopen_core ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_get_error pthread ipa_canopen_core pci_7841 ${catkin_LIBRARIES})
 
 #list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs" )
 

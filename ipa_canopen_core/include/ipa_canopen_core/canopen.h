@@ -71,12 +71,15 @@
 #include <cstdlib>
 #include <thread>
 #include <math.h>
-#include <libpcan.h>
 #include <utility>
 #include <fcntl.h>    // for O_RDWR
 #include <stdint.h>
 #include <inttypes.h>
 #include "schunkErrors.h"
+
+extern "C" {
+  #include <pci_7841.h>
+}
 
 namespace canopen{
 
@@ -89,12 +92,12 @@ namespace canopen{
     /**************************************************************/
     //static std::map<std::string, uint16_t> baudrates;
 
-    static std::map<std::string, uint32_t> baudrates = {
-        {"1M" , CAN_BAUD_1M},
-        {"500K" , CAN_BAUD_500K},
-        {"250K" , CAN_BAUD_250K},
-        {"125K" , CAN_BAUD_125K},
-    };
+//     static std::map<std::string, uint32_t> baudrates = {
+//         {"1M" , CAN_BAUD_1M},
+//         {"500K" , CAN_BAUD_500K},
+//         {"250K" , CAN_BAUD_250K},
+//         {"125K" , CAN_BAUD_125K},
+//     };
 
     /***************************************************************/
     //		    define classes and structs
@@ -224,11 +227,11 @@ namespace canopen{
             bool getNMTInit(){
                 return nmt_init_;
             }
-            
+
             std::string getNMTState(){
                 return NMTState_;
             }
-            
+
             std::string getMotorState(){
                 return motorState_;
             }
@@ -536,7 +539,7 @@ namespace canopen{
             void setNegativeLimit(bool neg_limit){
                 hardware_limit_negative_ = neg_limit;
             }
-            
+
             void setNMTInit(bool nmt_limit)
             {
                 nmt_init_ = nmt_limit;
@@ -675,9 +678,9 @@ namespace canopen{
         uint16_t index;
         uint8_t subindex;
 
-        inline SDOkey(TPCANRdMsg m):
-            index((m.Msg.DATA[2] << 8) + m.Msg.DATA[1]),
-            subindex(m.Msg.DATA[3]) {};
+        inline SDOkey(CAN_PACKET m):
+            index((m.data[2] << 8) + m.data[1]),
+            subindex(m.data[3]) {};
 
         inline SDOkey(uint16_t i, uint8_t s):
             index(i),
@@ -706,13 +709,13 @@ namespace canopen{
 
     extern std::map<std::string, DeviceGroup> deviceGroups;	// DeviceGroup name -> DeviceGroup object
     extern std::vector<std::thread> managerThreads;
-    extern HANDLE h;
+    extern int h;
     extern std::vector<std::string> openDeviceFiles;
     extern bool atFirstInit;
     extern int initTrials;
     extern std::map<SDOkey, std::function<void (uint8_t CANid, BYTE data[8])> > incomingDataHandlers;
-    extern std::map<uint16_t, std::function<void (const TPCANRdMsg m)> > incomingPDOHandlers;
-    extern std::map<uint16_t, std::function<void (const TPCANRdMsg m)> > incomingEMCYHandlers;
+    extern std::map<uint16_t, std::function<void (const CAN_PACKET m)> > incomingPDOHandlers;
+    extern std::map<uint16_t, std::function<void (const CAN_PACKET m)> > incomingEMCYHandlers;
 
     /***************************************************************/
     //			define state machine functions
@@ -740,13 +743,13 @@ namespace canopen{
     void pdoChanged(std::string chainName);
 
     void getErrors(uint16_t CANid);
-    std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m);
-    std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m);
+    std::vector<char> obtainManSWVersion(uint16_t CANid, std::shared_ptr<CAN_PACKET> m);
+    std::vector<char> obtainManHWVersion(uint16_t CANid, std::shared_ptr<CAN_PACKET> m);
     std::vector<char> obtainManDevName(uint16_t CANid, int size_name);
     std::vector<uint16_t> obtainVendorID(uint16_t CANid);
-    uint16_t obtainRevNr(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m);
-    std::vector<uint16_t> obtainProdCode(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m);
-    void readErrorsRegister(uint16_t CANid, std::shared_ptr<TPCANRdMsg> m);
+    uint16_t obtainRevNr(uint16_t CANid, std::shared_ptr<CAN_PACKET> m);
+    std::vector<uint16_t> obtainProdCode(uint16_t CANid, std::shared_ptr<CAN_PACKET> m);
+    void readErrorsRegister(uint16_t CANid, std::shared_ptr<CAN_PACKET> m);
     void readManErrReg(uint16_t CANid);
 
 
@@ -802,11 +805,11 @@ namespace canopen{
         std::memset(&NMTmsg, 0, sizeof(NMTmsg));
         NMTmsg.CAN_ID = 0;
         NMTmsg.rtr = 0x00;
-        NMTmsg.LEN = 2;
+        NMTmsg.len = 2;
 
         //std::cout << "Sending NMT. CANid: " << (uint16_t)CANid << "\tcommand: " << (uint16_t)command << std::endl;
-        NMTmsg.DATA[0] = command;
-        NMTmsg.DATA[1] = CANid;
+        NMTmsg.data[0] = command;
+        NMTmsg.data[1] = CANid;
         CanSendMsg(h, &NMTmsg);
     }
 
@@ -817,14 +820,14 @@ namespace canopen{
     extern CAN_PACKET syncMsg;
 
     inline void sendSync() {
-        TPCANMsg syncMsg;
+        CAN_PACKET syncMsg;
         std::memset(&syncMsg, 0, sizeof(syncMsg));
-        syncMsg.ID = 0x80;
-        syncMsg.MSGTYPE = 0x00;
+        syncMsg.CAN_ID = 0x80;
+        syncMsg.rtr = 0x00;
 
-        syncMsg.LEN = 0x00;
+        syncMsg.len = 0x00;
 
-        CAN_Write(h, &syncMsg);
+        CanSendMsg(h, &syncMsg);
     }
 
     /***************************************************************/
@@ -958,7 +961,7 @@ namespace canopen{
 
     void uploadSDO(uint8_t CANid, SDOkey sdo);
     void controlPDO(uint8_t CANid, u_int16_t control1, u_int16_t control2);
-    void processSingleSDO(uint8_t CANid, std::shared_ptr<TPCANRdMsg> message);
+    void processSingleSDO(uint8_t CANid, std::shared_ptr<CAN_PACKET> message);
     void requestDataBlock1(uint8_t CANid);
     void requestDataBlock2(uint8_t CANid);
 
@@ -978,10 +981,10 @@ namespace canopen{
 
     void defaultPDOOutgoing(uint16_t CANid, double positionValue);
     void defaultPDOOutgoing_interpolated(uint16_t CANid, double positionValue);
-    void defaultPDO_incoming(uint16_t CANid, const TPCANRdMsg m);
-    void defaultPDO_incoming_status(uint16_t CANid, const TPCANRdMsg m);
-    void defaultPDO_incoming_pos(uint16_t CANid, const TPCANRdMsg m);
-    void defaultEMCY_incoming(uint16_t CANid, const TPCANRdMsg m);
+    void defaultPDO_incoming(uint16_t CANid, const CAN_PACKET m);
+    void defaultPDO_incoming_status(uint16_t CANid, const CAN_PACKET m);
+    void defaultPDO_incoming_pos(uint16_t CANid, const CAN_PACKET m);
+    void defaultEMCY_incoming(uint16_t CANid, const CAN_PACKET m);
 
     /***************************************************************/
     //		define functions for receiving data

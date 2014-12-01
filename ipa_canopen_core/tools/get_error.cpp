@@ -75,14 +75,14 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    canopen::NMTmsg.ID = 0;
-    canopen::NMTmsg.MSGTYPE = 0x00;
-    canopen::NMTmsg.LEN = 2;
+    canopen::NMTmsg.CAN_ID = 0;
+    canopen::NMTmsg.rtr = 0x00;
+    canopen::NMTmsg.len = 2;
 
-    canopen::syncMsg.ID = 0x80;
-    canopen::syncMsg.MSGTYPE = 0x00;
+    canopen::syncMsg.CAN_ID = 0x80;
+    canopen::syncMsg.rtr = 0x00;
 
-    canopen::syncMsg.LEN = 0x00;
+    canopen::syncMsg.len = 0x00;
 
     std::string deviceFile = std::string(argv[1]);
     canopen::baudRate = std::string(argv[3]);
@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 
-    std::shared_ptr<TPCANRdMsg> m;
+    std::shared_ptr<CAN_PACKET> m;
 
     /***************************************************************/
     //		Manufacturer specific errors register

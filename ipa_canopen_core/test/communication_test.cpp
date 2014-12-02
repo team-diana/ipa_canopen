@@ -103,7 +103,7 @@ void test() {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 
-    std::shared_ptr<CAN_PACKET> m;
+    std::shared_ptr<CAN_PACKET> m = std::shared_ptr(new CAN_PACKET());
 
 
     canopen::readErrorsRegister(CANid, m);

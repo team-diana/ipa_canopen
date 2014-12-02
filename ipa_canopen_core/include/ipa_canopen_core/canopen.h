@@ -84,7 +84,6 @@ extern "C" {
 namespace canopen{
 
     extern std::chrono::milliseconds syncInterval;
-    extern std::string baudRate;
 
     /***************************************************************/
     // Define baudrates variables for accessing as string
@@ -772,14 +771,14 @@ namespace canopen{
 
     extern std::string operation_mode_param;
 
-    bool openConnection(std::string devName, std::string baudrate);
+    bool openConnection(std::string devName, const std::string& baudrate);
     //Another init option
-    bool init(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval);
-    bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_operation);
+    bool init(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval, const std::string& baudrate);
+    bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_operation, const std::string& baudrate);
 
     void pre_init(std::string chainName);
     bool recover(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval);
-    void halt(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval);
+    void halt(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval, const std::string& baudrate);
 
     extern std::function< void (uint16_t CANid, double positionValue) > sendPos;
     extern std::function< void (uint16_t CANid, double positionValue, double velocityValue) > sendPosPPMode;

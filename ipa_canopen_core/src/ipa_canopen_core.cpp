@@ -87,7 +87,6 @@ bool sdo_protect=false;
 BYTE protect_msg[8];
 
 std::chrono::milliseconds syncInterval;
-std::string baudRate;
 std::map<uint8_t, Device> devices;
 std::map<std::string, DeviceGroup> deviceGroups;
 int h;
@@ -119,7 +118,7 @@ std::chrono::duration<double> elapsed_seconds;
 //		define init and recover sequence
 /***************************************************************/
 
-bool openConnection(std::string devName, std::string baudrate)
+bool openConnection(std::string devName, const std::string& baudrate)
 {
     /*
      * Adlink driver does not have the 'devName', but the port is addressed
@@ -178,7 +177,7 @@ void pre_init(std::string chainName)
 }
 //////////////////////////////////////
 /////////////
-bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_operation)
+bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_operation, const std::string& baudrate)
 {
     initTrials++;
 
@@ -207,7 +206,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
         {
 
             CanCloseDriver(canopen::h);
-            connection_success = canopen::openConnection(deviceFile, canopen::baudRate);
+            connection_success = canopen::openConnection(deviceFile, baudrate);
 
             if (!connection_success)
             {
@@ -403,9 +402,9 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
     return true;
 }
 
-bool init(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval)
+bool init(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval, const std::string& baudrate)
 {
-    bool initialized = init(deviceFile, chainName, canopen::MODES_OF_OPERATION_INTERPOLATED_POSITION_MODE);
+    bool initialized = init(deviceFile, chainName, canopen::MODES_OF_OPERATION_INTERPOLATED_POSITION_MODE, baudrate);
 
     for (auto id : canopen::deviceGroups[chainName].getCANids())
     {
@@ -510,7 +509,7 @@ bool recover(std::string deviceFile, std::string chainName, std::chrono::millise
 ///
 
 
-void halt(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval)
+void halt(std::string deviceFile, std::string chainName, std::chrono::milliseconds syncInterval, const std::string& baudrate)
 {
     CanCloseDriver(h);
 
@@ -523,7 +522,7 @@ void halt(std::string deviceFile, std::string chainName, std::chrono::millisecon
 
     syncMsg.len = 0x00;
 
-    if (!canopen::openConnection(deviceFile, canopen::baudRate))
+    if (!canopen::openConnection(deviceFile, baudrate))
     {
         std::cout << "Cannot open CAN device; aborting." << std::endl;
         exit(EXIT_FAILURE);

@@ -47,6 +47,9 @@ add_library(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pci_7841)
 
+add_executable(${PROJECT_NAME}_communication_test test/communication_test.cpp)
+target_link_libraries(${PROJECT_NAME}_communication_test ipa_canopen_core pci_7841 ${catkin_LIBRARIES})
+
 add_executable(${PROJECT_NAME}_homing tools/homing.cpp)
 target_link_libraries(${PROJECT_NAME}_homing pthread ipa_canopen_core  pci_7841 ${catkin_LIBRARIES})
 

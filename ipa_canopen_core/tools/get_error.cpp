@@ -85,16 +85,16 @@ int main(int argc, char *argv[])
     canopen::syncMsg.len = 0x00;
 
     std::string deviceFile = std::string(argv[1]);
-    canopen::baudRate = std::string(argv[3]);
+    std::string baudrate = std::string(argv[3]);
 
-    if (!canopen::openConnection(deviceFile, canopen::baudRate)){
+    if (!canopen::openConnection(deviceFile, baudrate)){
         std::cout << "Cannot open CAN device; aborting." << std::endl;
 
         exit(EXIT_FAILURE);
     }
     else{
         std::cout << "Connection to CAN bus established" << std::endl;
-        std::cout << "Baud Rate:" << canopen::baudRate << std::endl;
+        std::cout << "Baud Rate:" << baudrate << std::endl;
     }
 
     uint16_t CANid = std::stoi(std::string(argv[2]));
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     j_names.push_back("joint_1");
     canopen::deviceGroups[ chainName ] = canopen::DeviceGroup(ids, j_names);
 
-    canopen::init(deviceFile,chainName, canopen::syncInterval);
+    canopen::init(deviceFile,chainName, canopen::syncInterval, baudrate);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

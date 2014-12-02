@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     std::string deviceFile = std::string(argv[1]);
     uint16_t CANid = std::stoi(std::string(argv[2]));
     canopen::syncInterval = std::chrono::milliseconds(std::stoi(std::string(argv[4])));
-    canopen::baudRate = std::string(argv[3]);
+    std::string baudrate = std::string(argv[3]);
     double targetVel = std::stod(std::string(argv[5]));
     double accel = std::stod(std::string(argv[6]));
 
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     j_names.push_back("joint_1");
     canopen::deviceGroups[ chainName ] = canopen::DeviceGroup(ids, j_names);
 
-    canopen::init(deviceFile, chainName, canopen::syncInterval);
+    canopen::init(deviceFile, chainName, canopen::syncInterval, baudrate);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     canopen::sendSync();

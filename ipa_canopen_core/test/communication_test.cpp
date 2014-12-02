@@ -66,34 +66,32 @@
 #include <gtest/gtest.h>
 
 
-TEST(IPAcanopen, communicationTest)
-{
+void test() {
 
     bool call_success = true;
 
 
-    canopen::NMTmsg.ID = 0;
-    canopen::NMTmsg.MSGTYPE = 0x00;
-    canopen::NMTmsg.LEN = 2;
+    canopen::NMTmsg.CAN_ID = 0;
+    canopen::NMTmsg.rtr = 0x00;
+    canopen::NMTmsg.len = 2;
 
-    canopen::syncMsg.ID = 0x80;
-    canopen::syncMsg.MSGTYPE = 0x00;
+    canopen::syncMsg.CAN_ID = 0x80;
+    canopen::syncMsg.rtr = 0x00;
 
-    canopen::syncMsg.LEN = 0x00;
+    canopen::syncMsg.len = 0x00;
 
-    std::string deviceFile = "/dev/pcan32";//std::string(argv[1]);
-    canopen::baudRate = "500K";
+    std::string deviceFile = "/dev/PCI7841W0";
+    std::string baudRate = "500K";
 
-    if (!canopen::openConnection(deviceFile, canopen::baudRate)){
+    if (!canopen::openConnection(deviceFile, baudRate)){
         std::cout << "Cannot open CAN device; aborting." << std::endl;
         call_success = false;
-        //exit(EXIT_FAILURE);
     }
     else{
         std::cout << "Connection to CAN bus established" << std::endl;
     }
-    
-    EXPECT_TRUE(call_success);
+
+    assert(call_success);
 
     uint16_t CANid = 1;//std::stoi(std::string(argv[2]));
 
@@ -105,7 +103,7 @@ TEST(IPAcanopen, communicationTest)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 
-    std::shared_ptr<TPCANRdMsg> m;
+    std::shared_ptr<CAN_PACKET> m;
 
 
     canopen::readErrorsRegister(CANid, m);
@@ -113,16 +111,16 @@ TEST(IPAcanopen, communicationTest)
     /***************************************************************/
     //		Manufacturer specific errors register
     /***************************************************************/
-    canopen::readManErrReg(CANid, m);
+    canopen::readManErrReg(CANid);
 
     /**************************
      * Hardware and Software Information
     *************************/
 
-    std::vector<uint16_t> vendor_id = canopen::obtainVendorID(CANid, m);
+    std::vector<uint16_t> vendor_id = canopen::obtainVendorID(CANid);
     uint16_t rev_number = canopen::obtainRevNr(CANid, m);
     std::vector<uint16_t> product_code = canopen::obtainProdCode(CANid, m);
-    std::vector<char> manufacturer_device_name = canopen::obtainManDevName(CANid,m);
+    std::vector<char> manufacturer_device_name = canopen::obtainManDevName(CANid, 4);
     std::vector<char> manufacturer_hw_version =  canopen::obtainManHWVersion(CANid, m);
     std::vector<char> manufacturer_sw_version =  canopen::obtainManSWVersion(CANid, m);
 
@@ -167,12 +165,10 @@ TEST(IPAcanopen, communicationTest)
 
     std::cout << std::endl;
 }
-        
+
 int main(int argc, char *argv[])
 {
-    testing::InitGoogleTest(&argc, argv);
-  
-    return RUN_ALL_TESTS();
-
+  test();
+  return 0;
 }
 

@@ -43,7 +43,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License LGPL as
- * published by the Free Software Foundation, either version 3 of the
+ * published by the Free Software Foundation, either version 3
  * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -103,7 +103,7 @@ void test() {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 
-    std::shared_ptr<CAN_PACKET> m = std::shared_ptr(new CAN_PACKET());
+    std::shared_ptr<CAN_PACKET> m = std::shared_ptr<CAN_PACKET>(new CAN_PACKET());
 
 
     canopen::readErrorsRegister(CANid, m);

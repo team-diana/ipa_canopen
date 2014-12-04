@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(ipa_canopen_core)
 
+find_package( PythonLibs 2.7 REQUIRED )
+include_directories( ${PYTHON_INCLUDE_DIRS} )
 find_package(catkin REQUIRED COMPONENTS roscpp)
+find_package( Boost COMPONENTS python REQUIRED )
+include_directories( ${Boost_INCLUDE_DIR} )
 
 if(CMAKE_COMPILER_IS_GNUCXX)
    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
@@ -58,6 +62,13 @@ target_link_libraries(${PROJECT_NAME}_move_device pthread ipa_canopen_core pci_7
 
 add_executable(${PROJECT_NAME}_get_error tools/get_error.cpp)
 target_link_libraries(${PROJECT_NAME}_get_error pthread ipa_canopen_core pci_7841 ${catkin_LIBRARIES})
+
+set(CAN_PYTHON can)
+add_library(${CAN_PYTHON} SHARED src/can_python.cpp )
+target_link_libraries(${CAN_PYTHON} ${Boost_LIBRARIES} pci_7841)
+# don't prepend wrapper library name with lib
+set_target_properties(${CAN_PYTHON} PROPERTIES PREFIX "" )
+
 
 #list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs" )
 

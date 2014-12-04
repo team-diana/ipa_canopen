@@ -58,6 +58,7 @@
  ****************************************************************/
 
 #include <ipa_canopen_core/canopen.h>
+#include "ipa_canopen_core/can_enum.h"
 #include <sstream>
 #include <cstring>
 #include <unordered_map>
@@ -66,12 +67,6 @@
 #include <cassert>
 
 // These values are taken from the Adlink 7841 datasheet
-enum BAUDRATE {
-CAN_BAUD_1M = 3,
-CAN_BAUD_500K = 2,
-CAN_BAUD_250K = 1,
-CAN_BAUD_125K = 0,
-};
 
 // These values are good for our configuration
 #define CAN_CARD_IDX 0
@@ -134,7 +129,7 @@ bool openConnection(std::string devName, const std::string& baudrate)
     setPort.accCode = 0; // This configuration of accCode and accMask enables
     setPort.accMask = 0x7FF; // all MAC_IDs input.
 
-    std::map<std::string, BAUDRATE> myMap = { {"125K", CAN_BAUD_125K},
+    std::map<std::string, CANBAUDRATE> myMap = { {"125K", CAN_BAUD_125K},
                                               {"250K", CAN_BAUD_250K},
                                               {"500K", CAN_BAUD_500K},
                                               {"1M", CAN_BAUD_1M} };
@@ -1713,6 +1708,7 @@ void processSingleSDO(uint8_t CANid, std::shared_ptr<CAN_PACKET> message)
 {
     message->CAN_ID = 0x00;
 
+    std::cout << "processSingleSDO canId: " <<  CANid  << std::endl;
     while (message->CAN_ID!= (0x580+CANid))
     {
         CanRcvMsg(h, message.get());

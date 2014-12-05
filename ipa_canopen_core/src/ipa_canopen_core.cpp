@@ -57,7 +57,7 @@
  *
  ****************************************************************/
 
-#include <ipa_canopen_core/canopen.h>
+#include "ipa_canopen_core/canopen.h"
 #include "ipa_canopen_core/can_enum.h"
 #include <sstream>
 #include <cstring>
@@ -179,7 +179,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
     if(initTrials == 4)
     {
         std::cout << "There are still problems with the devices. Trying a complete reset " << std::endl;
-        canopen::sendNMT(0x00, canopen::NMT_RESET_NODE);
+        canopen::sendNMT(0x00, NMT_RESET_NODE);
 
         initTrials=0;
     }
@@ -213,7 +213,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
         }
 
         std::cout << "Resetting communication with the devices " << std::endl;
-        canopen::sendNMT(0x00, canopen::NMT_RESET_COMMUNICATION);
+        canopen::sendNMT(0x00, NMT_RESET_COMMUNICATION);
 
     }
 
@@ -276,7 +276,7 @@ bool init(std::string deviceFile, std::string chainName, const int8_t mode_of_op
 
             std::cout << "Node: " << (uint16_t)id << " is now available" << std::endl;
 
-            canopen::sendNMT((u_int8_t)id, canopen::NMT_START_REMOTE_NODE);
+            canopen::sendNMT((u_int8_t)id, NMT_START_REMOTE_NODE);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

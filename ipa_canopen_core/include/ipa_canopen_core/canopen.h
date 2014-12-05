@@ -76,6 +76,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include "schunkErrors.h"
+#include "can_enum.h"
 
 extern "C" {
   #include <pci_7841.h>
@@ -789,12 +790,6 @@ namespace canopen{
     /***************************************************************/
     //	define NMT constants, variables and functions
     /***************************************************************/
-
-    const uint8_t NMT_START_REMOTE_NODE = 0x01;
-    const uint8_t NMT_STOP_REMOTE_NODE = 0x02;
-    const uint8_t NMT_ENTER_PRE_OPERATIONAL = 0x80;
-    const uint8_t NMT_RESET_NODE = 0x81;
-    const uint8_t NMT_RESET_COMMUNICATION = 0x82;
 
     extern CAN_PACKET NMTmsg;
 

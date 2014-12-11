@@ -60,29 +60,6 @@
 #include <ros/ros.h>
 #include "ipa_canopen_ros/JointLimits.h"
 
-
-bool JointLimits::checkVelocityLimits(std::vector<double> velocities)
-{
-
-    for (int i = 0; i < JointLimits::getDOF(); i++)
-    {
-        if(abs(velocities[i]) > JointLimits::getMaxVelocities()[i])
-        {
-            if(velocities[i] >= 0)
-                // set velocities command to max value
-                velocities[i] = JointLimits::getMaxVelocities()[i];
-            else
-                velocities[i] = -JointLimits::getMaxVelocities()[i];
-
-            ROS_INFO("Velocity %f exceeds limit %f for axis %i. moving with max velocity %f instead", velocities[i], JointLimits::getMaxVelocities()[i], i, JointLimits::getMaxVelocities()[i]);
-            return true;
-        }
-
-    }
-    return false;
-}
-
-
 bool JointLimits::checkPositionLimits(std::vector<double> target_pos,std::vector<double> velocities)
 {
 

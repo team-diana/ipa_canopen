@@ -62,9 +62,6 @@
 #include "std_msgs/String.h"
 #include "sensor_msgs/JointState.h"
 #include "control_msgs/JointTrajectoryControllerState.h"
-#include "brics_actuator/JointVelocities.h"
-#include "cob_srvs/Trigger.h"
-#include "cob_srvs/SetOperationMode.h"
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <iostream>
 #include <map>
@@ -74,9 +71,9 @@
 #include <XmlRpcValue.h>
 #include <ipa_canopen_ros/JointLimits.h>
 
-typedef boost::function<bool(cob_srvs::Trigger::Request&, cob_srvs::Trigger::Response&)> TriggerType;
-typedef boost::function<void(const brics_actuator::JointVelocities&)> JointVelocitiesType;
-typedef boost::function<bool(cob_srvs::SetOperationMode::Request&, cob_srvs::SetOperationMode::Response&)> SetOperationModeCallbackType;
+// typedef boost::function<bool(cob_srvs::Trigger::Request&, cob_srvs::Trigger::Response&)> TriggerType;
+// typedef boost::function<void(const brics_actuator::JointVelocities&)> JointVelocitiesType;
+// typedef boost::function<bool(cob_srvs::SetOperationMode::Request&, cob_srvs::SetOperationMode::Response&)> SetOperationModeCallbackType;
 
 std::vector<int> motor_direction;
 
@@ -95,113 +92,121 @@ std::string deviceFile;
 
 std::vector<std::string> chainNames;
 
-bool CANopenInit(cob_srvs::Trigger::Request &req, cob_srvs::Trigger::Response &res, std::string chainName)
-{
-    bool all_initialized = true;
-
-    ROS_INFO("Trying to initialize the chain: %s", chainName.c_str());
-
-    for (auto id : canopen::deviceGroups[chainName].getCANids())
-    {
-        if (not canopen::devices[id].getInitialized())
-        {
-            all_initialized = false;
-        }
-    }
-
-    if(all_initialized)
-    {
-        res.success.data = true;
-        res.error_message.data = "This chain is already initialized";
-        ROS_INFO("This chain is already initialized");
-        return true;
-    }
-
-    bool init_success = canopen::init(deviceFile, chainName, canopen::syncInterval);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-
-
-    if(init_success)
-    {
-        res.success.data = true;
-        res.error_message.data = "Sucessfuly initialized";
-        ROS_INFO("This chain was sucessfuly initialized");
-
-    }
-    else
-    {
-        res.success.data = false;
-        res.error_message.data = "Module could not be initialized";
-        ROS_WARN("This chain could not be initialized. Check for possible errors and try to initialize it again.");
-    }
-
-
-    return true;
-}
-
-
-bool CANopenRecover(cob_srvs::Trigger::Request &req, cob_srvs::Trigger::Response &res, std::string chainName)
-{
-
-    ROS_INFO("Trying to recover the chain: %s", chainName.c_str());
-
-    for (auto id : canopen::deviceGroups[chainName].getCANids())
-    {
-        if (not canopen::devices[id].getInitialized())
-        {
-            res.success.data = false;
-            res.error_message.data = "not initialized yet";
-            ROS_INFO("not initialized yet");
-            return true;
-        }
-    }
-
-    bool recover_success = canopen::recover(deviceFile,chainName, canopen::syncInterval);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// bool CANopenInit(cob_srvs::Trigger::Request &req, cob_srvs::Trigger::Response &res, std::string chainName)
+// {
+//     bool all_initialized = true;
+//
+//     ROS_INFO("Trying to initialize the chain: %s", chainName.c_str());
+//
+//     for (auto id : canopen::deviceGroups[chainName].getCANids())
+//     {
+//         if (not canopen::devices[id].getInitialized())
+//         {
+//             all_initialized = false;
+//         }
+//     }
+//
+//     if(all_initialized)
+//     {
+//         res.success.data = true;
+//         res.error_message.data = "This chain is already initialized";
+//         ROS_INFO("This chain is already initialized");
+//         return true;
+//     }
+//
+//     bool init_success = canopen::init(deviceFile, chainName, canopen::syncInterval);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//
+//
+//
+//     if(init_success)
+//     {
+//         res.success.data = true;
+//         res.error_message.data = "Sucessfuly initialized";
+//         ROS_INFO("This chain was sucessfuly initialized");
+//
+//     }
+//     else
+//     {
+//         res.success.data = false;
+//         res.error_message.data = "Module could not be initialized";
+//         ROS_WARN("This chain could not be initialized. Check for possible errors and try to initialize it again.");
+//     }
+//
+//
+//     return true;
+// }
 
 
+// bool CANopenRecover(cob_srvs::Trigger::Request &req, cob_srvs::Trigger::Response &res, std::string chainName)
+// {
+//
+//     ROS_INFO("Trying to recover the chain: %s", chainName.c_str());
+//
+//     for (auto id : canopen::deviceGroups[chainName].getCANids())
+//     {
+//         if (not canopen::devices[id].getInitialized())
+//         {
+//             res.success.data = false;
+//             res.error_message.data = "not initialized yet";
+//             ROS_INFO("not initialized yet");
+//             return true;
+//         }
+//     }
+//
+//     bool recover_success = canopen::recover(deviceFile,chainName, canopen::syncInterval);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//
+//
+//
+//     if(recover_success)
+//     {
+//
+//         res.success.data = true;
+//         res.error_message.data = "Sucessfuly recovered";
+//         ROS_INFO("The device was sucessfuly recovered");
+//         return true;
+//     }
+//     else
+//     {
+//         res.success.data = false;
+//         res.error_message.data = "Module could not be recovered";
+//         ROS_WARN("Module could not be recovered. Check for possible errors and try to recover it again.");
+//         return true;
+//     }
+//
+// }
+//
+//
+// bool CANOpenHalt(cob_srvs::Trigger::Request &req, cob_srvs::Trigger::Response &res, std::string chainName)
+// {status);
+//         // publish diagnostic message
+//         diagnostics.status = diagstatus_msg;
+//         diagnostics.header.stamp = ros::Time::now();
+//         diagnosticsPublisher.publish(diagnostics);
+//
+//         ros::spinOnce();
+//         loop_rate.sleep();
+//     }
+//
+//
+//
+//     canopen::halt(deviceFile, chainName, canopen::syncInterval);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//
+//     res.success.data = true;
+//     res.error_message.data = "";
+//     return true;
+// }
+//
+//
+// bool setOperationModeCallback(cob_srvs::SetOperationMode::Request &req, cob_srvs::SetOperationMode::Response &res, std::string chainName)
+// {
+//     res.success.data = true;  // for now this service is just a dummy, not used elsewhere
+//     return true;
+// }
 
-    if(recover_success)
-    {
-
-        res.success.data = true;
-        res.error_message.data = "Sucessfuly recovered";
-        ROS_INFO("The device was sucessfuly recovered");
-        return true;
-    }
-    else
-    {
-        res.success.data = false;
-        res.error_message.data = "Module could not be recovered";
-        ROS_WARN("Module could not be recovered. Check for possible errors and try to recover it again.");
-        return true;
-    }
-
-}
-
-
-bool CANOpenHalt(cob_srvs::Trigger::Request &req, cob_srvs::Trigger::Response &res, std::string chainName)
-{
-
-
-
-    canopen::halt(deviceFile, chainName, canopen::syncInterval);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    res.success.data = true;
-    res.error_message.data = "";
-    return true;
-}
-
-
-bool setOperationModeCallback(cob_srvs::SetOperationMode::Request &req, cob_srvs::SetOperationMode::Response &res, std::string chainName)
-{
-    res.success.data = true;  // for now this service is just a dummy, not used elsewhere
-    return true;
-}
-
-void setVel(const brics_actuator::JointVelocities &msg, std::string chainName)
+void setVel(const sensor_msgs::JointState &msg, int canId)
 {
     if (!canopen::atFirstInit & !canopen::recover_active)
     {
@@ -209,15 +214,6 @@ void setVel(const brics_actuator::JointVelocities &msg, std::string chainName)
         std::vector<double> positions;
 
 
-        int counter = 0;
-
-        for (auto it : msg.velocities)
-        {
-            velocities.push_back( it.value*motor_direction[counter]);
-            counter++;
-        }
-
-        counter = 0;
 
         for (auto id : canopen::deviceGroups[chainName].getCANids())
         {
@@ -588,7 +584,6 @@ int main(int argc, char **argv)
     std::map<std::string, ros::Publisher> currentOperationModePublishers;
     std::map<std::string, ros::Publisher> statePublishers;
     ros::Publisher jointStatesPublisher = n.advertise<sensor_msgs::JointState>("/joint_states", 1);
-    ros::Publisher diagnosticsPublisher = n.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 1);
 
     for (auto it : canopen::deviceGroups)
     {
@@ -619,10 +614,6 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
-
-        // iterate over all chains, get current pos and vel and publish as topics:
-
-
         for (auto dg : (canopen::deviceGroups))
         {
 
@@ -665,144 +656,6 @@ int main(int argc, char **argv)
             counter++;
         }
 
-        // publishing diagnostic messages
-        diagnostic_msgs::DiagnosticArray diagnostics;
-        diagnostic_msgs::DiagnosticStatus diagstatus;
-        std::vector<diagnostic_msgs::DiagnosticStatus> diagstatus_msg;
-
-        diagnostic_msgs::KeyValue keyval;
-        std::vector<diagnostic_msgs::KeyValue> keyvalues;
-
-
-
-        diagnostics.status.resize(1);
-
-        for (auto dg : (canopen::deviceGroups))
-        {
-            for (auto id : dg.second.getCANids())
-            {
-
-            std::string name = canopen::devices[id].getName();
-            //ROS_INFO("Name %s", name.c_str() );
-
-            keyval.key = "Node ID";
-            uint16_t node_id = canopen::devices[id].getCANid();
-            std::stringstream result;
-            result << node_id;
-            keyval.value = result.str().c_str();
-            keyvalues.push_back(keyval);
-
-            keyval.key = "Device Name";
-            keyval.value = name.c_str();
-            //std::vector<char> dev_name = canopen::devices[id].getManufacturerDevName();
-            //keyval.value = std::string(dev_name.begin(), dev_name.end());
-            keyvalues.push_back(keyval);
-
-            /*
-            keyval.key = "Hardware Version";
-            std::vector<char> manhw = canopen::devices[id].getManufacturerHWVersion();
-            keyval.value = std::string(manhw.begin(), manhw.end());
-            keyvalues.push_back(keyval);
-
-            keyval.key = "Software Version";
-            std::vector<char> mansw = canopen::devices[id].getManufacturerSWVersion();
-            keyval.value = std::string(mansw.begin(), mansw.end());
-            keyvalues.push_back(keyval);
-
-
-
-            keyval.key = "Vendor ID";
-            std::vector<uint16_t> vendor_id = canopen::devices[id].getVendorID();
-            std::stringstream result1;
-            for (auto it : vendor_id)
-            {
-                result1 <<  std::hex << it;
-            }
-            keyval.value = result1.str().c_str();
-            keyvalues.push_back(keyval);
-
-            keyval.key = "Revision Number";
-            uint16_t rev_number = canopen::devices[id].getRevNumber();
-            std::stringstream result2;
-            result2 << rev_number;
-            keyval.value = result2.str().c_str();
-            keyvalues.push_back(keyval);
-
-            keyval.key = "Product Code";
-            std::vector<uint16_t> prod_code = canopen::devices[id].getProdCode();
-            std::stringstream result3;
-            std::copy(prod_code.begin(), prod_code.end(), std::ostream_iterator<uint16_t>(result3, " "));
-            keyval.value = result3.str().c_str();
-            keyvalues.push_back(keyval);
-            */
-
-            bool error_ = canopen::devices[id].getFault();
-            bool initialized_ = canopen::devices[id].getInitialized();
-
-            if(initialized_)
-            {
-                std::stringstream operation_string;
-                operation_string << "Mode of operation for Node" << node_id;
-                keyval.key = operation_string.str().c_str();
-                int8_t mode_display = canopen::devices[id].getCurrentModeofOperation();
-                keyval.value = canopen::modesDisplay[mode_display];
-                keyvalues.push_back(keyval);
-
-                std::stringstream error_register_string;
-                error_register_string << "Error Register from Node" << node_id;
-                keyval.key = error_register_string.str().c_str();
-                keyval.value = canopen::devices[id].getErrorRegister();
-                keyvalues.push_back(keyval);
-
-                std::stringstream driver_temperature_string;
-                driver_temperature_string << "Current Driver Temperature for Node" << node_id;
-                keyval.key = driver_temperature_string.str().c_str();
-                double driver_temperature = canopen::devices[id].getDriverTemperature();
-                keyval.value = std::to_string(driver_temperature);
-                keyvalues.push_back(keyval);
-            }
-
-            //ROS_INFO("Fault: %d", error_);
-            //ROS_INFO("Referenced: %d", initialized_);
-
-            std::stringstream diag_string;
-            diag_string << dg.first;
-            diagstatus.name = diag_string.str().c_str();
-                
-            // set data to diagnostics
-            if(error_)
-            {
-                diagstatus.level = 2;
-                diagstatus.message = "Fault occured.";
-                diagstatus.values = keyvalues;
-                break;
-            }
-            else
-            {
-                if (initialized_)
-                {
-                    diagstatus.level = 0;
-                    diagstatus.message = "Device initialized and running";
-                    diagstatus.values = keyvalues;
-                }
-                else
-                {
-                    diagstatus.level = 1;
-                    diagstatus.message = "Device not initialized";
-                    diagstatus.values = keyvalues;
-                    break;
-                }
-            }
-        }
-    }
-        diagstatus_msg.push_back(diagstatus);
-        // publish diagnostic message
-        diagnostics.status = diagstatus_msg;
-        diagnostics.header.stamp = ros::Time::now();
-        diagnosticsPublisher.publish(diagnostics);
-
-        ros::spinOnce();
-        loop_rate.sleep();
     }
 
     return 0;

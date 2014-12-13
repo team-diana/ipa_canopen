@@ -61,6 +61,20 @@ def str_to_data_g(string):
 def str_to_data(string):
     return list(str_to_data_g(string))
 
+def init_os_mode(p, can_id):
+    sdo_key = SDOKey(0x1024, 0)
+    p.send_sdo(can_id, sdo_key, 0, True)
+    sleepms(3000)
+    resp = p.recv_msg()
+    expectedResData = [0x60, 0x24, 0x10, 0, 0, 0, 0, 0]
+    if not same_data(expectedResData, resp.data):
+        raise Exception("unable to set evaluate immediately mode")
+    sleepms(100)
+    p.clean_buffers()
+    sdo_key = SDOKey(0x1024, 0)
+    p.send_sdo(can_id, sdo_key, 0, True)
+    sleepms(3000)
+
 def start_shell(can_id):
     p = CanPort(0, 0)
     p.open()

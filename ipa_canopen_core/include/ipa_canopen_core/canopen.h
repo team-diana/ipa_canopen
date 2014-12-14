@@ -896,6 +896,7 @@ namespace canopen{
     const SDOkey HALT(0x605D, 0x0);
     const SDOkey FAULT(0x605E, 0x0);
     const SDOkey MODES(0x6060, 0x0);
+    const SDOkey TARGET_VELOCITY(0x60FF, 0x0);
 
     /* Constants for the PDO mapping */
     const int TPDO1_msg = 0x180;
@@ -959,6 +960,8 @@ namespace canopen{
     void requestDataBlock1(uint8_t CANid);
     void requestDataBlock2(uint8_t CANid);
 
+    CAN_PACKET receiveCanPacket();
+    void printCanPacketData(const CAN_PACKET& msg);
     void sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value);
     void sendSDO(uint8_t CANid, SDOkey sdo, int32_t value);
     void sendSDO_unknown(uint8_t CANid, SDOkey sdo, int32_t value);

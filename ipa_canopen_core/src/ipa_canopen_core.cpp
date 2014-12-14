@@ -121,6 +121,7 @@ bool openConnection(std::string devName, const std::string& baudrate)
      */
 
     if ((h = CanOpenDriver(CAN_CARD_IDX, CAN_PORT_IDX)) == -1) {
+        std::cerr << "Unable to open port " << std::endl;
         return false;
     }
 
@@ -128,22 +129,10 @@ bool openConnection(std::string devName, const std::string& baudrate)
     setPort.mode = 0; // 0 : 11-bit ;  1 : 29-bit CAN network
     setPort.accCode = 0; // This configuration of accCode and accMask enables
     setPort.accMask = 0x7FF; // all MAC_IDs input.
-
-    std::map<std::string, CANBAUDRATE> myMap = { {"125K", CAN_BAUD_125K},
-                                              {"250K", CAN_BAUD_250K},
-                                              {"500K", CAN_BAUD_500K},
-                                              {"1M", CAN_BAUD_1M} };
-
-    auto it = myMap.find(baudrate);
-    if(it == myMap.end()) {
-      std::cerr << "invalid baud rate: " << baudrate << std::endl;
-      return false;
-    }
-
-
-    setPort.baudrate = it->second;
+    setPort.baudrate = CAN_BAUD_500K;
 
     if ((CanConfigPort(h, &setPort)) == -1) {
+        std::cerr << "Unable to config port " << std::endl;
         return false;
     }
 
@@ -805,6 +794,29 @@ void sendSDO(uint8_t CANid, SDOkey sdo, int32_t value)
     msg.data[6] = (value >> 16) & 0xFF;
     msg.data[7] = (value >> 24) & 0xFF;
     CanSendMsg(h, &msg);
+}
+
+  void printCanPacketData(const CAN_PACKET& msg) {
+    printf("<");
+    for(unsigned char i =0; i < msg.len; i++) {
+      printf("%X", (unsigned int)msg.data[i]);
+      if(i != (msg.len - 1)) {
+        printf(":");
+      }
+    }
+    printf(">\n");
+  }
+
+CAN_PACKET receiveCanPacket() {
+  CAN_PACKET p = {0};
+   if (CanRcvMsg(h, &p) == 0) {
+        printf("receiving data: ");
+        std::cout << " -- COB-ID:  " << p.CAN_ID << " -- ";
+        printCanPacketData(p);
+    } else {
+      std::cout << "no data received" << std::endl;
+    }
+  return p;
 }
 
 void sendSDO_unknown(uint8_t CANid, SDOkey sdo, int32_t value)

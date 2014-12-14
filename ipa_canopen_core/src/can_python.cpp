@@ -278,6 +278,24 @@ public:
   }
 
   // Expedited transfer
+  void sendSDO16(uint8_t CANid, SDOkey sdo, uint16_t value, bool sizeIndicated = true) {
+    CAN_PACKET msg;
+    std::memset(&msg, 0, sizeof(msg));
+    msg.CAN_ID = CANid + 0x600;
+    // msg.rtr already set to zero
+    msg.len = 8;
+    msg.data[0] = 0x2B;
+    msg.data[1] = sdo.index & 0xFF;
+    msg.data[2] = (sdo.index >> 8) & 0xFF;
+    msg.data[3] = sdo.subindex;
+    msg.data[4] = value & 0xFF;
+    msg.data[5] = (value >> 8) & 0xFF;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
+    sendCanPacket(msg);
+  }
+
+  // Expedited transfer
   void sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value, bool sizeIndicated = true) {
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
@@ -474,6 +492,7 @@ BOOST_PYTHON_MODULE(can)
     .def("start_remote_node",        &CanPort::startRemoteNode, canPortStartRemoteNodeOverloads())
     .def("upload_sdo", &CanPort::uploadSDO)
     .def("send_sdo", &CanPort::sendSDO)
+    .def("send_sdo_16", &CanPort::sendSDO)
     .def("init_send_segmented_sdo", &CanPort::initSendSegmentedSdo)
     .def("request_data_block", &CanPort::requestDataBlock)
     .def("enable_debug",        &CanPort::setDebugEnabled);

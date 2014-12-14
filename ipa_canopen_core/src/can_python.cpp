@@ -4,95 +4,38 @@
 #include <chrono>
 #include <thread>
 #include <memory>
+#include "ipa_canopen_core/can_python.h"
 
 extern "C" {
   #include "pci_7841.h"
 }
 
-enum TPDO {
-  TPDO_INDEX = 0x1800,
-  TPDO1_MSG = 0x180,
-  TPDO2_MSG = 0x280,
-  TPDO3_MSG = 0x380,
-  TPDO4_MSG = 0x480
-};
-
-enum RDPO {
-  RDPO_INDEX = 0x1400,
-  RPDO1_MSG = 0x200,
-  RPDO2_MSG = 0x300,
-  RPDO3_MSG = 0x400,
-  RPDO4_MSG = 0x500
-};
-
-enum DATA_BLOCK_NUM {
-  DATA_BLOCK_1 = 0x60,
-  DATA_BLOCK_2 = 0x70
-};
-
 using namespace std;
 
-struct CanException : public std::exception {
-  CanException(const std::string& msg) : msg(msg) {
+CanException::CanException(const string& msg)
+{
     cerr << "new exception: " << msg << endl;
-  }
+}
 
-  const char* what() const throw() override {
+const char* CanException::what()  const throw()
+{
     return msg.c_str();
-  }
-
-private:
-  std::string msg;
-};
+}
 
 static void translateCanException(const CanException & e) {
   PyErr_SetString(PyExc_UserWarning, e.what() );
 }
 
-struct CanMsg {
-  CanMsg() : canId(0), rtr(0) {
+CanMsg::CanMsg(): canId(0), rtr(0) {
 
-  }
+}
 
-  int size() {
-    return len(data);
-  }
+int CanMsg::size()
+{
+  return len(data);
+}
 
-  int canId;
-  int rtr;
-  boost::python::list data;
-};
-
-struct SDOkey {
-        uint16_t index;
-        uint8_t subindex;
-
-        inline SDOkey(CAN_PACKET m):
-            index((m.data[2] << 8) + m.data[1]),
-            subindex(m.data[3]) {};
-
-        inline SDOkey(uint16_t i, uint8_t s):
-            index(i),
-            subindex(s) {};
-
-        bool operator==(const SDOkey& o) {
-          if (index == o.index && subindex == o.subindex) return true;
-          else return false;
-        }
-
-        bool operator!=(const SDOkey& o) {return !(*this == o);}
-};
-
-//TPDO MAPPING
-const SDOkey TPDO_map(0x1A00, 0x0);
-
-//RPDO MAPPING
-const SDOkey RPDO_map(0x1600, 0x0);
-
-
-class CanPort {
-public:
-  CanPort(int cardNumber, int portNumber) :
+CanPort::CanPort(int cardNumber, int portNumber) :
   cardNumber(cardNumber),
   portNumber(portNumber),
   opened(false),
@@ -101,7 +44,8 @@ public:
 
   }
 
-  void open() {
+void CanPort::open()
+{
     if(debugEnabled) {
       cout << "trying to open..." << endl;
     }
@@ -115,13 +59,16 @@ public:
         cout << "port opened." << endl;
       }
     }
-  }
+}
 
-  void setDebugEnabled(bool enabled) {
+
+void CanPort::setDebugEnabled(bool enabled)
+{
     debugEnabled = enabled;
-  }
+}
 
-  void sendMsg(int canId, const boost::python::list& data, int rtr = 0) {
+void CanPort::sendMsg(int canId, const boost::python::list& data, int rtr)
+{
     CAN_PACKET canPacket;
     memset(&canPacket, 0, sizeof(canPacket));
     canPacket.CAN_ID = canId;
@@ -136,7 +83,8 @@ public:
     sendCanPacket(canPacket);
   }
 
-  CanMsg rcvMsg() {
+CanMsg CanPort::rcvMsg()
+{
     CAN_PACKET canPacket = {0};
     if (CanRcvMsg(handle, &canPacket) == 0) {
       if(debugEnabled) {
@@ -164,9 +112,10 @@ public:
 
 
     return canMsg;
-  }
+}
 
-  void requestDataBlock(uint8_t canId, DATA_BLOCK_NUM dataBlockNum) {
+void CanPort::requestDataBlock(uint8_t canId, DATA_BLOCK_NUM dataBlockNum)
+{
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = canId + 0x600;
@@ -174,10 +123,10 @@ public:
     msg.len = 8;
     msg.data[0] = dataBlockNum;
     sendCanPacket(msg);
-  }
+}
 
-
-  void configPort(CANMODE mode, DWORD accCode, DWORD accMask, CANBAUDRATE baudrate) {
+void CanPort::configPort(CANMODE mode, DWORD accCode, DWORD accMask, CANBAUDRATE baudrate)
+{
     PORT_STRUCT setPort;
     isPortOpenedAssert(true);
 
@@ -187,41 +136,49 @@ public:
     setPort.baudrate = baudrate;
 
     CanConfigPort(handle, &setPort);
-  }
+}
 
-  void cleanBuffers() {
+void CanPort::cleanBuffers()
+{
     cleanRxBuffer();
     cleanTxBuffer();
-  }
+}
 
-  void cleanTxBuffer() {
+void CanPort::cleanTxBuffer()
+{
     isPortOpenedAssert(true);
     CanClearTxBuffer(handle);
-  }
+}
 
-  void cleanRxBuffer() {
+void CanPort::cleanRxBuffer()
+{
     isPortOpenedAssert(true);
     CanClearRxBuffer(handle);
-  }
+}
 
-  void close() {
+void CanPort::close()
+{
     isPortOpenedAssert(true);
     CanCloseDriver(handle);
-  }
+}
 
-  void resetCommunication(u_int8_t nodeId = 0) {
+void CanPort::resetCommunication(u_int8_t nodeId)
+{
     sendNMT(NMT_RESET_COMMUNICATION, nodeId);
-  }
+}
 
-  void resetNode(u_int8_t nodeId = 0) {
+void CanPort::resetNode(u_int8_t nodeId)
+{
     sendNMT(NMT_RESET_NODE, nodeId);
-  }
+}
 
-  void startRemoteNode(u_int8_t nodeId = 0) {
+void CanPort::startRemoteNode(u_int8_t nodeId)
+{
     sendNMT(NMT_START_REMOTE_NODE, nodeId);
-  }
+}
 
-  void sendNMT(uint8_t command, uint8_t CANid = 0) {
+void CanPort::sendNMT(uint8_t command, uint8_t CANid)
+{
     CAN_PACKET NMTmsg;
     std::memset(&NMTmsg, 0, sizeof(NMTmsg));
 
@@ -233,9 +190,10 @@ public:
     NMTmsg.data[1] = CANid;
 
     sendCanPacket(NMTmsg);
-  }
+}
 
-  void controlPDO(uint8_t CANid, u_int16_t control1, u_int16_t control2) {
+void CanPort::controlPDO(uint8_t CANid, u_int16_t control1, u_int16_t control2)
+{
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x200;
@@ -245,9 +203,10 @@ public:
     msg.data[1] = control2;
 
     sendCanPacket(msg);
-  }
+}
 
-  void uploadSDO(uint8_t CANid, SDOkey sdo) {
+void CanPort::uploadSDO(uint8_t CANid, SDOkey sdo)
+{
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
@@ -263,9 +222,10 @@ public:
     msg.data[7] = 0x00;
 
     sendCanPacket(msg);
-  }
+}
 
-  void initSendSegmentedSdo(uint8_t CANid, SDOkey sdo) {
+void CanPort::initSendSegmentedSdo(uint8_t CANid, SDOkey sdo)
+{
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
@@ -275,10 +235,10 @@ public:
     msg.data[2] = (sdo.index >> 8) & 0xFF;
     msg.data[3] = sdo.subindex;
     sendCanPacket(msg);
-  }
+}
 
-  // Expedited transfer
-  void sendSDO16(uint8_t CANid, SDOkey sdo, uint16_t value, bool sizeIndicated = true) {
+void CanPort::sendSDO16(uint8_t CANid, SDOkey sdo, uint16_t value, bool sizeIndicated)
+{
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
@@ -293,10 +253,10 @@ public:
     msg.data[6] = 0x00;
     msg.data[7] = 0x00;
     sendCanPacket(msg);
-  }
+}
 
-  // Expedited transfer
-  void sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value, bool sizeIndicated = true) {
+void CanPort::sendSDO(uint8_t CANid, SDOkey sdo, uint32_t value, bool sizeIndicated)
+{
     CAN_PACKET msg;
     std::memset(&msg, 0, sizeof(msg));
     msg.CAN_ID = CANid + 0x600;
@@ -316,22 +276,24 @@ public:
     msg.data[7] = (value >> 24) & 0xFF;
 
     sendCanPacket(msg);
-  }
+}
 
-  void clearTPDOMapping(uint8_t id, int object) {
+void CanPort::clearTPDOMapping(uint8_t id, int object)
+{
     sendSDO(id, SDOkey(TPDO_map.index + object, 0x00), u_int8_t(0x00));
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
+}
 
-  void clearRPDOMapping(uint8_t id, int object) {
+
+void CanPort::clearRPDOMapping(uint8_t id, int object)
+{
     int32_t data = (0x00 << 16) + (0x80 << 24);
     sendSDO(id, SDOkey(RPDO_map.index + object, 0x00), data, false);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
+}
 
-
-private:
-  void sendCanPacket(CAN_PACKET& msg) {
+void CanPort::sendCanPacket(CAN_PACKET& msg)
+{
     isPortOpenedAssert(true);
 
     if(debugEnabled) {
@@ -340,20 +302,23 @@ private:
     }
 
     CanSendMsg(handle, &msg);
-  }
+}
 
-  void printCanPacketData(const CAN_PACKET& msg) {
+void CanPort::printCanPacketData(const CAN_PACKET& msg)
+{
     printf("<");
-    for(unsigned char i =0; i < msg.len; i++) {
+    std::cout << " len:  " << msg.len << " -- ";
+    for(BYTE i =0; i < msg.len; i++) {
       printf("%X", (unsigned int)msg.data[i]);
       if(i != (msg.len - 1)) {
         printf(":");
       }
     }
     printf(">\n");
-  }
+}
 
-  void isPortOpenedAssert(bool opened) {
+void CanPort::isPortOpenedAssert(bool opened)
+{
     if(this->opened != opened) {
       std::string msg = "Port is ";
       if(this->opened) {
@@ -363,14 +328,10 @@ private:
       }
       throw new CanException(msg);
     }
-  }
+}
 
-
-  void makeTPDOMapping(uint8_t id, int object, std::vector<std::string> registers, std::vector<int> sizes, u_int8_t sync_type) {
-    //////////////////// sub ind1=63
-    ///
-    ///
-    ///
+void CanPort::makeTPDOMapping(uint8_t id, int object, vector< string > registers, vector< int > sizes, u_int8_t sync_type)
+{
     int ext_counter=0;
     for(int counter=0; counter < registers.size();counter++)
     {
@@ -396,9 +357,10 @@ private:
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     sendSDO(id, SDOkey(TPDO_map.index+object,0x00), u_int8_t(ext_counter));
-  }
+}
 
-  void makeRPDOMapping(uint8_t id, int object, std::vector<std::string> registers, std::vector<int> sizes , u_int8_t sync_type) {
+void CanPort::makeRPDOMapping(uint8_t id, int object, vector< string > registers, vector< int > sizes, u_int8_t sync_type)
+{
     int ext_counter=0;
     for(int counter=0; counter < registers.size();counter++)
     {
@@ -424,38 +386,33 @@ private:
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     sendSDO(id, SDOkey(RPDO_map.index+object,0x00), u_int8_t(ext_counter));
-  }
+}
 
-    void enableTPDO(uint8_t id, int object) {
+void CanPort::enableTPDO(uint8_t id, int object)
+{
       static int msgs[] = { TPDO1_MSG, TPDO2_MSG, TPDO3_MSG, TPDO4_MSG};
       int32_t data = msgs[id] + (0x00 << 16) + (0x00 << 24);
       sendSDO(id, SDOkey(TPDO_INDEX+object,0x01), data);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+}
 
-  void enableRPDO(uint8_t id, int object) {
+void CanPort::enableRPDO(uint8_t id, int object)
+{
       static int msgs[] = { RPDO1_MSG, RPDO2_MSG, RPDO3_MSG, RPDO4_MSG};
       int32_t data = (msgs[id]) + (0x00 << 16) + (0x00 << 24);
       sendSDO(id, SDOkey(RDPO_INDEX+object,0x01), data);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+}
 
-  unsigned int getCOBType(unsigned long cobId) {
+unsigned int CanPort::getCOBType(long unsigned int cobId)
+{
     return (cobId >> 7) & 0b1111;
-  }
+}
 
-  unsigned int getCanId(long cobId) {
+unsigned int CanPort::getCanId(long int cobId)
+{
     return cobId & 0x7F;
-  }
-
-  private:
-    int cardNumber;
-    int portNumber;
-    bool opened;
-    int handle;
-    bool debugEnabled;
-};
-
+}
 
 std::string initModule() {
 }

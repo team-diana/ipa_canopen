@@ -1,3 +1,6 @@
+#ifndef CAN_PYTHON_H
+#define CAN_PYTHON_H
+
 
 #include <boost/python.hpp>
 #include <ipa_canopen_core/can_enum.h>
@@ -85,6 +88,7 @@ public:
   void setDebugEnabled(bool enabled);
   void sendMsg(int canId, const boost::python::list& data, int rtr = 0);
   CanMsg rcvMsg();
+  CAN_PACKET rcvMsgImpl();
   void requestDataBlock(uint8_t canId, DATA_BLOCK_NUM dataBlockNum);
   void configPort(CANMODE mode, DWORD accCode,
                   DWORD accMask, CANBAUDRATE baudrate);
@@ -128,3 +132,5 @@ private:
   int handle;
   bool debugEnabled;
 };
+
+#endif // CAN_PYTHON_H

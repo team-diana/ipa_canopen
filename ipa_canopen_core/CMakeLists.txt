@@ -65,10 +65,13 @@ add_executable(${PROJECT_NAME}_get_error tools/get_error.cpp)
 target_link_libraries(${PROJECT_NAME}_get_error pthread ipa_canopen_core pci_7841 ${catkin_LIBRARIES})
 
 set(CAN_PYTHON can)
-add_library(${CAN_PYTHON} SHARED src/can_python.cpp )
+add_library(${CAN_PYTHON} SHARED src/can_python.cpp src/can_python_impl.cpp)
 target_link_libraries(${CAN_PYTHON} ${Boost_LIBRARIES} pci_7841)
 # don't prepend wrapper library name with lib
 set_target_properties(${CAN_PYTHON} PROPERTIES PREFIX "" )
+
+add_executable(${PROJECT_NAME}_os_shell src/os_shell.cpp src/can_port.cpp)
+target_link_libraries(${PROJECT_NAME}_os_shell pthread ipa_canopen_core pci_7841)
 
 
 #list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs" )
